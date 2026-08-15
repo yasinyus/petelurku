@@ -5,7 +5,7 @@ import { ApiService } from '../../services/api';
 
 interface SubscriptionBillingProps {
   org: Organization;
-  onUpdatePlan: (plan: SubscriptionPlan) => void;
+  onUpdatePlan: (plan: SubscriptionPlan, subscriptionEndsAt?: string | null) => void;
 }
 
 export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
@@ -18,7 +18,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const isTrial = org.subscriptionStatus === 'trialing' || org.status === 'trial';
-  const formatDate = (value?: string | null) => value ? new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-';
+  const formatDate = (value?: string | null) => value ? new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
   const statusLabel = isTrial ? 'Trial' : org.subscriptionStatus === 'active' || org.status === 'active' ? 'Aktif' : org.subscriptionStatus || 'Tidak aktif';
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
       try {
         const result = await ApiService.getSubscriptionStatus();
         if (result.data?.payment_status === 'active') {
-          onUpdatePlan(result.data.subscription_plan);
+          onUpdatePlan(result.data.subscription_plan, result.data.expires_at || null);
           setPaymentSuccess(true);
           window.history.replaceState({}, '', window.location.pathname);
           return;
@@ -108,11 +108,11 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
       {/* Header */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
             <span className="bg-amber-50 text-amber-800 border border-amber-200 text-xs px-2.5 py-0.5 rounded-full font-bold uppercase">
               Paket Saat Ini: {org.plan.toUpperCase()}
             </span>
-            <span className="text-slate-500 text-xs">Status: <strong className={isTrial ? 'text-amber-700' : 'text-emerald-700'}>{statusLabel}</strong></span>
+            <span className="text-slate-500 text-xs">Status: <strong className={isTrial ? 'text-amber-700' : 'text-emerald-700'}>{statusLabel}{!isTrial && statusLabel === 'Aktif' ? ` sampai ${formatDate(org.subscriptionEndsAt || org.nextBillingDate)}` : ''}</strong></span>
           </div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-emerald-600" />
@@ -120,7 +120,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
           </h2>
         </div>
         <div className="text-right">
-          <div className="text-right"><span className={`${isTrial ? 'text-amber-700' : 'text-emerald-700'} font-bold text-xs flex items-center gap-1 justify-end`}><CheckCircle2 className="w-4 h-4" /> Status {statusLabel}</span><div className="text-sm text-slate-600 mt-1">{isTrial ? `Trial berakhir: ${formatDate(org.trialEndsAt)}` : `Langganan berakhir: ${formatDate(org.subscriptionEndsAt || org.nextBillingDate)}`}</div></div>
+          <div className="text-right"><span className={`${isTrial ? 'text-amber-700' : 'text-emerald-700'} font-bold text-xs flex items-center gap-1 justify-end`}><CheckCircle2 className="w-4 h-4" /> {isTrial ? `Trial sampai ${formatDate(org.trialEndsAt)}` : `Aktif sampai ${formatDate(org.subscriptionEndsAt || org.nextBillingDate)}`}</span></div>
         </div>
       </div>
 

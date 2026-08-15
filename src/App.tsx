@@ -408,11 +408,14 @@ export default function App() {
   };
 
   // Subscription Upgrade Handler
-  const handleUpdatePlan = (newPlan: SubscriptionPlan) => {
+  const handleUpdatePlan = (newPlan: SubscriptionPlan, subscriptionEndsAt?: string | null) => {
     const updatedOrg = {
       ...org,
       plan: newPlan,
-      status: 'active' as const
+      status: 'active' as const,
+      subscriptionStatus: 'active',
+      subscriptionEndsAt: subscriptionEndsAt || org.subscriptionEndsAt,
+      nextBillingDate: subscriptionEndsAt ? String(subscriptionEndsAt).slice(0, 10) : org.nextBillingDate
     };
     setOrg(updatedOrg);
     StorageService.saveOrg(updatedOrg);
