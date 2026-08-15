@@ -94,6 +94,14 @@ jobs:
             -e "ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -p $PROD_PORT" \
             ./ "$PROD_USER@$PROD_HOST:/opt/petelurku/app/"
 
+      - name: Perbarui konfigurasi Docker Compose
+        run: |
+          ssh -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" '
+            set -e
+            test -f /opt/petelurku/app/deploy/compose.yaml
+            cp /opt/petelurku/app/deploy/compose.yaml /opt/petelurku/compose.yaml
+          '
+
       - name: Backup database
         run: |
           ssh -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" '
