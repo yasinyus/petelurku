@@ -22,7 +22,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
   const statusLabel = isTrial ? 'Trial' : org.subscriptionStatus === 'active' || org.status === 'active' ? 'Aktif' : org.subscriptionStatus || 'Tidak aktif';
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('payment') !== 'finish') return;
+    const returningFromPayment = new URLSearchParams(window.location.search).get('payment') === 'finish';
     let attempts = 0;
     const checkStatus = async () => {
       attempts += 1;
@@ -31,11 +31,11 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
         if (result.data?.payment_status === 'active') {
           onUpdatePlan(result.data.subscription_plan, result.data.expires_at || null);
           setPaymentSuccess(true);
-          window.history.replaceState({}, '', window.location.pathname);
+          if (returningFromPayment) window.history.replaceState({}, '', window.location.pathname);
           return;
         }
-        if (attempts < 6) window.setTimeout(checkStatus, 3000);
-        else setPaymentError('Pembayaran masih menunggu konfirmasi. Status akan diperbarui otomatis setelah Midtrans mengirim notifikasi.');
+        if (returningFromPayment && attempts < 10) window.setTimeout(checkStatus, 3000);
+        else if (returningFromPayment) setPaymentError('Pembayaran masih menunggu konfirmasi. Muat ulang halaman ini beberapa saat lagi.');
       } catch (error: any) {
         setPaymentError(error.message || 'Status pembayaran belum dapat diperiksa.');
       }

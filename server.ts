@@ -437,6 +437,49 @@ async function startServer() {
     return { id, ...SUBSCRIPTION_PLANS[id] };
   };
 
+  const syncMidtransPayment = async (orderId: string, farmId: string) => {
+    if (!process.env.MIDTRANS_SERVER_KEY) return false;
+    const verification = await fetch(`${midtransApiBase()}/v2/${encodeURIComponent(orderId)}/status`, {
+      headers: { Authorization: midtransAuthorization(), Accept: 'application/json' }
+    });
+    if (!verification.ok) return false;
+    const payment: any = await verification.json();
+    const paid = payment.transaction_status === 'settlement' || (payment.transaction_status === 'capture' && payment.fraud_status === 'accept');
+    if (!paid) return false;
+    const connection = await getMySQLPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      const [rows]: any = await connection.execute(
+        "SELECT id, farm_id, plan_type, amount, status FROM saas_subscriptions WHERE midtrans_order_id = ? AND farm_id = ? FOR UPDATE",
+        [orderId, farmId]
+      );
+      if (!rows.length) { await connection.rollback(); return false; }
+      const subscription = rows[0];
+      if (Number(payment.gross_amount) !== Number(subscription.amount)) { await connection.rollback(); return false; }
+      if (subscription.status !== 'active') {
+        const [expiryRows]: any = await connection.execute(
+          "SELECT GREATEST(NOW(), COALESCE(MAX(expires_at), NOW())) AS base_expiry FROM saas_subscriptions WHERE farm_id = ? AND status = 'active' AND id <> ?",
+          [farmId, subscription.id]
+        );
+        await connection.execute(
+          "UPDATE saas_subscriptions SET status = 'active', payment_type = ?, paid_at = NOW(), expires_at = DATE_ADD(?, INTERVAL 1 MONTH) WHERE id = ?",
+          [payment.payment_type || null, expiryRows[0].base_expiry, subscription.id]
+        );
+      }
+      await connection.execute(
+        "UPDATE farms SET subscription_plan = ?, subscription_status = 'active', mrr_amount = ? WHERE id = ?",
+        [subscription.plan_type, subscription.amount, farmId]
+      );
+      await connection.commit();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  };
+
   app.post('/api/subscriptions/checkout', async (req: Request, res: Response) => {
     const session = getSession(req)!;
     const planId = req.body.planId;
@@ -483,12 +526,21 @@ async function startServer() {
     try {
       const farmId = await getCurrentFarmId(getSession(req)!.user.id);
       if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
-      const rows: any[] = await queryMySQL(
+      let rows: any[] = await queryMySQL(
         `SELECT f.subscription_plan, f.subscription_status, f.trial_ends_at,
           s.midtrans_order_id, s.status AS payment_status, s.payment_type, s.paid_at, s.expires_at
          FROM farms f LEFT JOIN saas_subscriptions s ON s.id = (SELECT s2.id FROM saas_subscriptions s2 WHERE s2.farm_id = f.id ORDER BY s2.created_at DESC LIMIT 1)
          WHERE f.id = ?`, [farmId]
       );
+      if (rows[0]?.midtrans_order_id && rows[0]?.payment_status === 'pending') {
+        await syncMidtransPayment(rows[0].midtrans_order_id, farmId);
+        rows = await queryMySQL(
+          `SELECT f.subscription_plan, f.subscription_status, f.trial_ends_at,
+            s.midtrans_order_id, s.status AS payment_status, s.payment_type, s.paid_at, s.expires_at
+           FROM farms f LEFT JOIN saas_subscriptions s ON s.id = (SELECT s2.id FROM saas_subscriptions s2 WHERE s2.farm_id = f.id ORDER BY s2.created_at DESC LIMIT 1)
+           WHERE f.id = ?`, [farmId]
+        );
+      }
       return res.json({ source: 'mysql', data: rows[0] });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
