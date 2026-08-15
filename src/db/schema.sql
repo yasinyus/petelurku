@@ -3,8 +3,8 @@
 -- Compatible with MySQL 5.7, 8.0+, MariaDB, AWS RDS, GCP Cloud SQL
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS `kandang_baru` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `kandang_baru`;
+-- Database dibuat dan dipilih oleh src/db/migrate.ts berdasarkan
+-- MYSQL_DATABASE. Jangan hard-code nama database di berkas skema ini.
 
 -- 1. SaaS Owner & Admin Users
 CREATE TABLE IF NOT EXISTS `users` (
