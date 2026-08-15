@@ -81,7 +81,8 @@ jobs:
 
       - name: Upload source ke VPS
         run: |
-          rsync -az --delete \
+          test -s Dockerfile || { echo "Dockerfile tidak ditemukan pada checkout GitHub"; exit 1; }
+          rsync -az --delete --itemize-changes \
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='.env' \
@@ -93,6 +94,23 @@ jobs:
             --exclude='*.log' \
             -e "ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -p $PROD_PORT" \
             ./ "$PROD_USER@$PROD_HOST:/opt/petelurku/app/"
+          scp \
+            -P "$PROD_PORT" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            Dockerfile \
+            "$PROD_USER@$PROD_HOST:/opt/petelurku/app/Dockerfile"
+
+      - name: Verifikasi berkas deployment di VPS
+        run: |
+          ssh -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" '
+            set -e
+            test -s /opt/petelurku/app/Dockerfile
+            test -s /opt/petelurku/app/package.json
+            test -s /opt/petelurku/app/deploy/compose.yaml
+            echo "Dockerfile, package.json, dan compose.yaml tersedia di VPS"
+          '
 
       - name: Perbarui konfigurasi Docker Compose
         run: |
