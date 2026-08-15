@@ -54,10 +54,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   dataMode = 'demo',
   onToggleDataMode,
 }) => {
-  const isSaaSOwner = currentUser?.role === 'owner';
+  const isSaaSOwner = currentUser?.role === 'saas_owner';
   const isWorker = currentUser?.role === 'worker';
 
-  const menuItems: { id: TabType; label: string; icon: React.ReactNode; badge?: number | string; badgeColor?: string; adminOnly?: boolean }[] = [
+  const menuItems: { id: TabType; label: string; icon: React.ReactNode; badge?: number | string; badgeColor?: string; saasOwnerOnly?: boolean }[] = [
     { 
       id: 'dashboard', 
       label: 'Dashboard Analisis', 
@@ -117,7 +117,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'App Mobile Flutter', 
       icon: <Smartphone className="w-4 h-4 text-emerald-600" />,
       badge: 'NEW',
-      badgeColor: 'bg-emerald-500 text-white font-bold'
+      badgeColor: 'bg-emerald-500 text-white font-bold',
+      saasOwnerOnly: true
     },
     { 
       id: 'saas_owner', 
@@ -125,17 +126,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <Building2 className="w-4 h-4 text-emerald-600" />,
       badge: 'PRO',
       badgeColor: 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-200',
-      adminOnly: true
+      saasOwnerOnly: true
     },
   ];
 
   const visibleMenuItems = menuItems.filter(item => {
+    if (isSaaSOwner) return item.saasOwnerOnly === true;
     if (isWorker) {
       return item.id === 'production';
     }
-    if (item.adminOnly) {
-      return isSaaSOwner;
-    }
+    if (item.saasOwnerOnly) return false;
     return true;
   });
 

@@ -92,9 +92,9 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (dataMode !== 'real' || !authenticatedUserId) return;
+    if (dataMode !== 'real' || !authenticatedUserId || currentUser.role === 'saas_owner') return;
     loadMySQLData().catch((err) => showToast(`Gagal memuat MySQL: ${err.message}`));
-  }, [dataMode, authenticatedUserId]);
+  }, [dataMode, authenticatedUserId, currentUser.role]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -154,6 +154,7 @@ export default function App() {
       setAuthenticatedUserId(user.id);
       setIsGuestDemo(false);
       setViewMode('app');
+      if (user.role === 'saas_owner') setActiveTab('saas_owner');
       if (new URLSearchParams(window.location.search).get('payment') === 'finish') setActiveTab('billing');
     }).catch(() => undefined).finally(() => setIsSessionChecking(false));
   }, []);
@@ -482,7 +483,7 @@ export default function App() {
             setAuthenticatedUserId(null);
           }
           setViewMode('app');
-          if (portalType === 'saas_owner') {
+          if (portalType === 'saas_owner' || userData?.role === 'saas_owner') {
             setActiveTab('saas_owner');
           } else {
             setActiveTab('dashboard');
@@ -694,12 +695,12 @@ export default function App() {
             </div>
           )}
 
-          {activeTab === 'flutter_mobile' && (
+          {activeTab === 'flutter_mobile' && currentUser.role === 'saas_owner' && (
             <FlutterMobileStudio />
           )}
 
           {activeTab === 'saas_owner' && (
-            currentUser.role === 'owner' ? (
+            currentUser.role === 'saas_owner' ? (
               <SaaSOwnerDashboard />
             ) : (
               <div className="p-8 bg-white border border-slate-200 rounded-2xl text-center space-y-3">

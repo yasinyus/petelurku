@@ -92,6 +92,16 @@ async function startServer() {
   // -------------------------------------------------------------
   const dbStatus = await checkMySQLConnection();
   console.log(`[MySQL Database Status]: ${dbStatus.message}`);
+  if (dbStatus.connected && process.env.SAAS_OWNER_EMAIL && process.env.SAAS_OWNER_PASSWORD) {
+    if (process.env.SAAS_OWNER_PASSWORD.length < 12) throw new Error('SAAS_OWNER_PASSWORD minimal 12 karakter.');
+    await queryMySQL(
+      `INSERT INTO users (id, email, password_hash, full_name, role, status)
+       VALUES ('usr-saas-production', ?, ?, 'Super Admin PetelurKu.com', 'saas_owner', 'active')
+       ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), full_name = VALUES(full_name), role = 'saas_owner', status = 'active'`,
+      [process.env.SAAS_OWNER_EMAIL.trim().toLowerCase(), `$scrypt$${hashPassword(process.env.SAAS_OWNER_PASSWORD)}`]
+    );
+    console.info(`Akun SaaS Owner siap: ${process.env.SAAS_OWNER_EMAIL.trim().toLowerCase()}`);
+  }
 
   // The app is database-backed. Do not silently serve demo data when MySQL is
   // unavailable: callers need a clear error so no entered data appears saved.
@@ -244,14 +254,16 @@ async function startServer() {
           if (user.status !== 'active') {
             return res.status(403).json({ success: false, message: 'Email belum dikonfirmasi. Periksa email pendaftaran Anda.' });
           }
-          if (user.password_hash.startsWith('$scrypt$') && user.password_hash !== `$scrypt$${hashPassword(password || '')}`) {
+          const validScryptPassword = user.password_hash.startsWith('$scrypt$') && user.password_hash === `$scrypt$${hashPassword(password || '')}`;
+          const allowDevelopmentSeed = process.env.NODE_ENV !== 'production' && !user.password_hash.startsWith('$scrypt$');
+          if (!validScryptPassword && !allowDevelopmentSeed) {
             return res.status(401).json({ success: false, message: 'Password salah' });
           }
           const sessionUser = {
             id: user.id,
             name: user.full_name,
             email: user.email,
-            role: user.role === 'saas_owner' || user.role === 'farm_owner' ? 'owner' : user.role === 'farm_worker' ? 'worker' : user.role === 'farm_manager' ? 'manager' : user.role
+            role: user.role === 'saas_owner' ? 'saas_owner' : user.role === 'farm_owner' ? 'owner' : user.role === 'farm_worker' ? 'worker' : user.role === 'farm_manager' ? 'manager' : user.role
           };
           const sessionId = crypto.randomBytes(32).toString('hex');
           sessions.set(sessionId, { user: sessionUser, expiresAt: Date.now() + SESSION_TTL_MS });

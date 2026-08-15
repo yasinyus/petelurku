@@ -1,6 +1,6 @@
 export type SubscriptionPlan = 'basic' | 'pro' | 'enterprise';
 
-export type UserRole = 'owner' | 'manager' | 'worker' | 'vet';
+export type UserRole = 'saas_owner' | 'owner' | 'manager' | 'worker' | 'vet';
 
 export interface User {
   id: string;
