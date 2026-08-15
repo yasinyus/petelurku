@@ -584,6 +584,68 @@ async function startServer() {
     }
   });
 
+  app.get('/api/admin/dashboard', async (req: Request, res: Response) => {
+    if (getSession(req)!.user.role !== 'saas_owner') return res.status(403).json({ error: 'Khusus SaaS Owner.' });
+    try {
+      const [farmRows, paymentRows, historyRows]: any[] = await Promise.all([
+        queryMySQL(
+          `SELECT f.id, f.name, f.owner_name, u.email AS owner_email, f.city, f.subscription_plan,
+            f.subscription_status, f.mrr_amount, f.created_at, f.trial_ends_at,
+            COUNT(DISTINCT h.id) AS total_coops, COALESCE(SUM(h.current_chickens), 0) AS total_chickens,
+            (SELECT s.expires_at FROM saas_subscriptions s WHERE s.farm_id=f.id AND s.status='active' ORDER BY s.expires_at DESC LIMIT 1) AS paid_until,
+            (SELECT s.payment_type FROM saas_subscriptions s WHERE s.farm_id=f.id ORDER BY s.created_at DESC LIMIT 1) AS payment_type
+           FROM farms f JOIN users u ON u.id=f.owner_user_id LEFT JOIN houses h ON h.farm_id=f.id
+           GROUP BY f.id, f.name, f.owner_name, u.email, f.city, f.subscription_plan, f.subscription_status, f.mrr_amount, f.created_at, f.trial_ends_at
+           ORDER BY f.created_at DESC`),
+        queryMySQL(
+          `SELECT s.id, s.farm_id, f.name AS farm_name, s.plan_type, s.amount, s.status,
+            s.midtrans_order_id, s.payment_type, s.paid_at, s.created_at
+           FROM saas_subscriptions s JOIN farms f ON f.id=s.farm_id ORDER BY s.created_at DESC LIMIT 200`),
+        queryMySQL(
+          `SELECT DATE_FORMAT(paid_at, '%Y-%m') AS month_key, DATE_FORMAT(paid_at, '%b') AS month_label,
+            COALESCE(SUM(amount),0) AS revenue, COUNT(DISTINCT farm_id) AS subscribers
+           FROM saas_subscriptions
+           WHERE status='active' AND paid_at IS NOT NULL AND paid_at >= DATE_SUB(CURDATE(), INTERVAL 5 MONTH)
+           GROUP BY month_key, month_label ORDER BY month_key`)
+      ]);
+      const tenants = farmRows.map((row: any) => {
+        const status = row.subscription_status === 'trialing' ? 'trial' : row.subscription_status === 'active' ? 'active' : row.subscription_status === 'canceled' ? 'suspended' : 'expired';
+        return {
+          id: row.id, name: row.name, ownerName: row.owner_name, ownerEmail: row.owner_email,
+          ownerPhone: '', city: row.city, plan: row.subscription_plan, status,
+          monthlyRevenue: status === 'active' ? Number(row.mrr_amount || 0) : 0,
+          totalCoops: Number(row.total_coops || 0), totalChickens: Number(row.total_chickens || 0),
+          joinedDate: String(row.created_at).slice(0, 10),
+          nextBillingDate: String(row.paid_until || row.trial_ends_at || '').slice(0, 10),
+          paymentMethod: row.payment_type || 'Belum ada', autoRenew: false
+        };
+      });
+      const transactions = paymentRows.map((row: any) => ({
+        id: row.id, orgId: row.farm_id, orgName: row.farm_name, amount: Number(row.amount), plan: row.plan_type,
+        paymentMethod: row.payment_type || 'Belum dipilih', gateway: 'Midtrans',
+        status: row.status === 'active' ? 'settlement' : row.status === 'pending' ? 'pending' : row.status === 'failed' ? 'failed' : 'expire',
+        transactionDate: new Date(row.paid_at || row.created_at).toLocaleString('id-ID'), invoiceNumber: row.midtrans_order_id || row.id
+      }));
+      const history = historyRows.map((row: any) => ({ month: row.month_label, mrr: Number(row.revenue), subscribers: Number(row.subscribers) }));
+      return res.json({ source: 'mysql', data: { tenants, transactions, history } });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch('/api/admin/farms/:id/status', async (req: Request, res: Response) => {
+    if (getSession(req)!.user.role !== 'saas_owner') return res.status(403).json({ error: 'Khusus SaaS Owner.' });
+    const status = req.body.status === 'active' ? 'active' : req.body.status === 'suspended' ? 'canceled' : null;
+    if (!status) return res.status(400).json({ error: 'Status tidak valid.' });
+    try {
+      const result: any = await queryMySQL('UPDATE farms SET subscription_status = ? WHERE id = ?', [status, req.params.id]);
+      if (!result.affectedRows) return res.status(404).json({ error: 'Peternakan tidak ditemukan.' });
+      return res.json({ success: true });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
   // Read-only AI copilot. All farm data is selected server-side from the
   // authenticated tenant; the Gemini key never reaches web/mobile clients.
   app.post('/api/ai/chat', async (req: Request, res: Response) => {

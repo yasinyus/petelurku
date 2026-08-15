@@ -114,6 +114,20 @@ export const ApiService = {
     return payload;
   },
 
+  getAdminDashboard: async () => {
+    const res = await fetch('/api/admin/dashboard');
+    const payload = await res.json().catch(() => ({ error: 'Respons dashboard admin tidak valid.' }));
+    if (!res.ok) throw new Error(payload.error || 'Gagal memuat dashboard admin.');
+    return payload;
+  },
+
+  updateAdminFarmStatus: async (farmId: string, status: 'active' | 'suspended') => {
+    const res = await fetch(`/api/admin/farms/${farmId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    const payload = await res.json().catch(() => ({ error: 'Respons perubahan status tidak valid.' }));
+    if (!res.ok) throw new Error(payload.error || 'Gagal mengubah status peternakan.');
+    return payload;
+  },
+
   // Fetch Farms from API
   getFarms: async () => {
     try {

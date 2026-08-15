@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Building2, 
   CreditCard, 
@@ -208,8 +208,11 @@ const MRR_HISTORY = [
 ];
 
 export const SaaSOwnerDashboard: React.FC = () => {
-  const [tenants, setTenants] = useState<SaaSTenantOrg[]>(INITIAL_TENANTS);
-  const [transactions, setTransactions] = useState<SaaSPaymentTransaction[]>(INITIAL_TRANSACTIONS);
+  const [tenants, setTenants] = useState<SaaSTenantOrg[]>([]);
+  const [transactions, setTransactions] = useState<SaaSPaymentTransaction[]>([]);
+  const [mrrHistory, setMrrHistory] = useState<Array<{ month: string; mrr: number; subscribers: number }>>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [dataError, setDataError] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'tenants' | 'financials' | 'broadcast'>('tenants');
   
   // Search and Filters
@@ -235,6 +238,23 @@ export const SaaSOwnerDashboard: React.FC = () => {
   const [isMigrating, setIsMigrating] = useState(false);
   const [migrationResult, setMigrationResult] = useState<string | null>(null);
 
+  const loadDashboard = async () => {
+    setIsLoadingData(true);
+    setDataError('');
+    try {
+      const result = await ApiService.getAdminDashboard();
+      setTenants(result.data.tenants || []);
+      setTransactions(result.data.transactions || []);
+      setMrrHistory(result.data.history || []);
+    } catch (error: any) {
+      setDataError(error.message || 'Gagal memuat data admin.');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  useEffect(() => { loadDashboard(); }, []);
+
   const handleRunDataMigration = async () => {
     setIsMigrating(true);
     const res = await ApiService.runMigration();
@@ -258,6 +278,11 @@ export const SaaSOwnerDashboard: React.FC = () => {
   const basicCount = tenants.filter(t => t.plan === 'basic' && t.status === 'active').length;
   const proCount = tenants.filter(t => t.plan === 'pro' && t.status === 'active').length;
   const enterpriseCount = tenants.filter(t => t.plan === 'enterprise' && t.status === 'active').length;
+  const proEnterpriseRevenue = tenants.reduce((total, tenant) => total + (tenant.status === 'active' && (tenant.plan === 'pro' || tenant.plan === 'enterprise') ? tenant.monthlyRevenue : 0), 0);
+  const proEnterpriseShare = currentMRR > 0 ? (proEnterpriseRevenue / currentMRR) * 100 : 0;
+  const latestRevenue = mrrHistory.at(-1)?.mrr || 0;
+  const previousRevenue = mrrHistory.at(-2)?.mrr || 0;
+  const monthlyGrowth = previousRevenue > 0 ? ((latestRevenue - previousRevenue) / previousRevenue) * 100 : 0;
 
   // Filtered Tenants List
   const filteredTenants = tenants.filter(t => {
@@ -301,18 +326,15 @@ export const SaaSOwnerDashboard: React.FC = () => {
     setNewCity('');
   };
 
-  const handleToggleStatus = (id: string) => {
-    setTenants(tenants.map(t => {
-      if (t.id === id) {
-        const nextStatus = t.status === 'active' ? 'expired' : 'active';
-        return { 
-          ...t, 
-          status: nextStatus,
-          monthlyRevenue: nextStatus === 'active' ? (t.plan === 'enterprise' ? 199000 : t.plan === 'pro' ? 99000 : 49000) : 0 
-        };
-      }
-      return t;
-    }));
+  const handleToggleStatus = async (id: string) => {
+    const tenant = tenants.find((item) => item.id === id);
+    if (!tenant) return;
+    try {
+      await ApiService.updateAdminFarmStatus(id, tenant.status === 'active' ? 'suspended' : 'active');
+      await loadDashboard();
+    } catch (error: any) {
+      window.alert(error.message || 'Gagal mengubah status peternakan.');
+    }
   };
 
   const handleSendBroadcast = (e: React.FormEvent) => {
@@ -353,25 +375,18 @@ export const SaaSOwnerDashboard: React.FC = () => {
 
           <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={handleRunDataMigration}
-              disabled={isMigrating}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer shadow-xs"
-              title="Jalankan migrasi dan data awal admin"
-            >
-              <RefreshCw className={`w-4 h-4 ${isMigrating ? 'animate-spin' : ''}`} />
-              {isMigrating ? 'Migrasi...' : 'Migrasi Data Admin'}
-            </button>
-
-            <button
-              onClick={() => setShowAddTenantModal(true)}
+              onClick={loadDashboard}
+              disabled={isLoadingData}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer shadow-xs"
             >
-              <UserPlus className="w-4 h-4" />
-              Onboarding Peternakan Baru
+              <RefreshCw className={`w-4 h-4 ${isLoadingData ? 'animate-spin' : ''}`} />
+              Perbarui Data
             </button>
           </div>
         </div>
       </div>
+
+      {dataError && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-medium text-rose-700">{dataError}</div>}
 
       {/* Migration Notification Result Banner */}
       {migrationResult && (
@@ -408,7 +423,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
             <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-              <ArrowUpRight className="w-3.5 h-3.5" /> +18.4% MoM
+              <ArrowUpRight className="w-3.5 h-3.5" /> {monthlyGrowth.toLocaleString('id-ID', { maximumFractionDigits: 1 })}% MoM
             </span>
             <span className="text-slate-400">EST ARR: Rp {(estimatedARR / 1000000).toFixed(0)} Jt</span>
           </div>
@@ -466,7 +481,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-emerald-700 font-semibold">
-            <span>Churn Rate Rendah (&lt;1.5%)</span>
+            <span>Berdasarkan pelanggan aktif di MySQL</span>
           </div>
         </div>
 
@@ -486,13 +501,13 @@ export const SaaSOwnerDashboard: React.FC = () => {
               <p className="text-xs text-slate-500 mt-0.5">Pertumbuhan pendapatan 6 bulan terakhir</p>
             </div>
             <span className="text-xs font-mono text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-              Target Q3: Rp 55 Jt
+              Data Pembayaran Aktual
             </span>
           </div>
 
           <div className="h-44 flex items-end justify-between gap-3 pt-6 pb-2 border-b border-slate-100">
-            {MRR_HISTORY.map((item, idx) => {
-              const maxMrr = 50000000;
+            {mrrHistory.map((item, idx) => {
+              const maxMrr = Math.max(...mrrHistory.map((entry) => entry.mrr), 1);
               const heightPercent = Math.round((item.mrr / maxMrr) * 100);
               return (
                 <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
@@ -575,7 +590,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
             <div className="font-bold text-slate-800 flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Insight Strategis:
             </div>
-            <p>Paket Pro & Enterprise menyumbang <strong>82.5%</strong> dari total MRR platform Anda.</p>
+            <p>Paket Pro dan Bisnis menyumbang <strong>{proEnterpriseShare.toLocaleString('id-ID', { maximumFractionDigits: 1 })}%</strong> dari MRR aktif.</p>
           </div>
         </div>
 
@@ -771,13 +786,13 @@ export const SaaSOwnerDashboard: React.FC = () => {
             
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">Riwayat Transaksi Gateway (Midtrans & Xendit)</h3>
+                <h3 className="font-bold text-slate-900 text-sm">Riwayat Transaksi Midtrans</h3>
                 <p className="text-slate-500 text-[11px]">Log otomatis pembayaran langganan</p>
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1 rounded-lg font-bold text-[11px] flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Webhook Live Connected
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Data MySQL
                 </span>
               </div>
             </div>

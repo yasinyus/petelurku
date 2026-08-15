@@ -229,6 +229,14 @@ CREATE TABLE IF NOT EXISTS `saas_subscriptions` (
   CONSTRAINT `fk_saas_sub_farm` FOREIGN KEY (`farm_id`) REFERENCES `farms` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Selaraskan harga paket lama dengan harga PetelurKu yang berlaku saat ini.
+UPDATE `farms` SET `mrr_amount` = CASE `subscription_plan`
+  WHEN 'basic' THEN 49000
+  WHEN 'pro' THEN 99000
+  WHEN 'enterprise' THEN 199000
+  ELSE `mrr_amount`
+END;
+
 -- Insert Default Seed Data for Testing & Demo
 INSERT IGNORE INTO `users` (`id`, `email`, `password_hash`, `full_name`, `role`, `status`) VALUES
 ('usr-saas-1', 'admin@chicksync.saas', 'hash_secret_123', 'Super Admin PetelurKu.com', 'saas_owner', 'active'),
