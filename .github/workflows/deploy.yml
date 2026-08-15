@@ -20,10 +20,10 @@ jobs:
 
     steps:
       - name: Ambil source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Siapkan Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -50,18 +50,34 @@ jobs:
 
     steps:
       - name: Ambil source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Siapkan koneksi SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.PROD_KNOWN_HOSTS }}
         run: |
+          test -n "$PROD_HOST" || { echo "Secret PROD_HOST belum diisi"; exit 1; }
+          test -n "$PROD_PORT" || { echo "Secret PROD_PORT belum diisi"; exit 1; }
+          test -n "$PROD_USER" || { echo "Secret PROD_USER belum diisi"; exit 1; }
+          test -n "$SSH_PRIVATE_KEY" || { echo "Secret PROD_SSH_KEY belum diisi"; exit 1; }
+          test -n "$SSH_KNOWN_HOSTS" || { echo "Secret PROD_KNOWN_HOSTS belum diisi"; exit 1; }
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
+
+      - name: Uji koneksi SSH ke VPS
+        run: |
+          ssh \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            -p "$PROD_PORT" \
+            "$PROD_USER@$PROD_HOST" \
+            "echo 'Koneksi SSH GitHub Actions berhasil'"
 
       - name: Upload source ke VPS
         run: |
@@ -75,7 +91,7 @@ jobs:
             --exclude='flutter_app/build/' \
             --exclude='flutter_app/.dart_tool/' \
             --exclude='*.log' \
-            -e "ssh -p $PROD_PORT" \
+            -e "ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -p $PROD_PORT" \
             ./ "$PROD_USER@$PROD_HOST:/opt/petelurku/app/"
 
       - name: Backup database
