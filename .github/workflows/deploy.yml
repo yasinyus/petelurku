@@ -142,8 +142,6 @@ jobs:
             set -e
             cd /opt/petelurku
             docker compose build app
-            docker compose run --rm -e MYSQL_DATABASE=petelurku app \
-              node -e "console.log('Database migrasi:', process.env.MYSQL_DATABASE)"
             docker compose run --rm -e MYSQL_DATABASE=petelurku app npm run db:migrate
             docker compose up -d --remove-orphans
             docker compose ps
