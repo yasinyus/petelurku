@@ -6,7 +6,7 @@ interface OrgRoleManagementProps {
   org: Organization;
   coops: Coop[];
   currentUser: User;
-  onInviteUser: (user: Omit<User, 'id'>) => Promise<void> | void;
+  onInviteUser: (user: Omit<User, 'id'> & { password: string }) => Promise<void> | void;
   onUpdateMemberAccount: (id: string, data: { name: string; email: string; password?: string }) => Promise<void> | void;
   onDeleteMember: (member: User) => Promise<void> | void;
   onAssignHouseWorker: (houseId: string, workerId: string | null) => Promise<void> | void;
@@ -26,6 +26,7 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole>('worker');
   const [phone, setPhone] = useState('');
+  const [initialPassword, setInitialPassword] = useState('');
   const [editingMember, setEditingMember] = useState<User | null>(null);
   const [accountName, setAccountName] = useState('');
   const [accountEmail, setAccountEmail] = useState('');
@@ -56,14 +57,16 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
       email,
       role,
       avatar: `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 900000)}?w=150&auto=format&fit=crop&q=80`,
-      phone
+      phone,
+      password: initialPassword
       });
 
       setName('');
       setEmail('');
+      setInitialPassword('');
       setShowInviteModal(false);
     } catch (error: any) {
-      window.alert(error.message || 'Gagal menyimpan undangan anggota');
+      window.alert(error.message || 'Gagal menambahkan anggota');
     }
   };
 
@@ -166,7 +169,7 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
             className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer shrink-0"
           >
             <UserPlus className="w-4 h-4" />
-            Undang Anggota Baru
+            Tambah Anggota Baru
           </button>
         )}
       </div>
@@ -333,7 +336,8 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
       {showInviteModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-xl text-slate-900">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Undang Anggota Tim Baru</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">Tambah Anggota Tim</h3>
+            <p className="text-xs text-slate-500 mb-4">Akun akan langsung aktif. Setelah disimpan, atur password melalui tombol pengaturan akun.</p>
             <form onSubmit={handleInviteSubmit} className="space-y-4 text-xs">
               <div>
                 <label className="block text-slate-700 mb-1 font-medium">Nama Lengkap</label>
@@ -384,6 +388,20 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
                 </div>
               </div>
 
+              <div>
+                <label className="block text-slate-700 mb-1 font-medium">Password Awal</label>
+                <input
+                  type="password"
+                  minLength={8}
+                  value={initialPassword}
+                  onChange={(e) => setInitialPassword(e.target.value)}
+                  placeholder="Minimal 8 karakter"
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-emerald-600"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">Berikan email dan password ini kepada anggota agar dapat langsung login.</p>
+              </div>
+
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
                 <button
                   type="button"
@@ -396,7 +414,7 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
                   type="submit"
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer"
                 >
-                  Kirim Undangan
+                  Tambah Anggota
                 </button>
               </div>
             </form>

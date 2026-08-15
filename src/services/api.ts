@@ -194,7 +194,7 @@ export const ApiService = {
 
   getHouses: async () => (await fetch('/api/houses')).json(),
   getMembers: async () => (await fetch('/api/members')).json(),
-  inviteMember: async (data: { name: string; email: string; role: string; phone?: string }) => {
+  inviteMember: async (data: { name: string; email: string; role: string; phone?: string; password: string }) => {
     const res = await fetch('/api/members', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     if (!res.ok) throw new Error((await res.json()).error || 'Gagal menyimpan anggota');
     return res.json();

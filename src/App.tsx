@@ -348,21 +348,22 @@ export default function App() {
   };
 
   // Org Invite Member Handler
-  const handleInviteUser = async (newUser: Omit<User, 'id'>) => {
+  const handleInviteUser = async (newUser: Omit<User, 'id'> & { password: string }) => {
     if (dataMode === 'real') {
       await ApiService.inviteMember(newUser);
       await loadMySQLData();
-      showToast(`Undangan untuk ${newUser.name} tersimpan di MySQL.`);
+      showToast(`Akun ${newUser.name} berhasil ditambahkan dan langsung aktif.`);
       return;
     }
-    const userObj: User = { ...newUser, id: `user-${Date.now()}` };
+    const { password: _password, ...safeUser } = newUser;
+    const userObj: User = { ...safeUser, id: `user-${Date.now()}`, status: 'active' };
     const updatedOrg = {
       ...org,
       members: [...org.members, userObj]
     };
     setOrg(updatedOrg);
     StorageService.saveOrg(updatedOrg);
-    showToast(`Anggota ${userObj.name} (${userObj.role}) berhasil diundang!`);
+    showToast(`Anggota ${userObj.name} (${userObj.role}) berhasil ditambahkan.`);
   };
 
   const handleUpdateMemberAccount = async (id: string, data: { name: string; email: string; password?: string }) => {

@@ -682,9 +682,10 @@ async function startServer() {
 
   app.post('/api/members', async (req: Request, res: Response) => {
     const session = getSession(req)!;
-    const { name, email, role, phone } = req.body;
+    const { name, email, role, phone, password } = req.body;
     const roleMap: Record<string, string> = { manager: 'farm_manager', worker: 'farm_worker', vet: 'vet' };
-    if (!name || !email || !roleMap[role]) return res.status(400).json({ error: 'Nama, email, dan peran downline wajib diisi.' });
+    if (!name || !email || !roleMap[role]) return res.status(400).json({ error: 'Nama, email, dan peran anggota wajib diisi.' });
+    if (!password || String(password).length < 8) return res.status(400).json({ error: 'Password awal minimal 8 karakter.' });
     try {
       const farmId = await getCurrentFarmId(session.user.id);
       if (!farmId) return res.status(403).json({ error: 'Hanya owner peternakan yang dapat mengundang anggota.' });
@@ -697,11 +698,11 @@ async function startServer() {
       if (exists.length) return res.status(409).json({ error: 'Email pengguna sudah terdaftar.' });
       const userId = crypto.randomUUID();
       await queryMySQL(
-        "INSERT INTO users (id, email, password_hash, full_name, role, status) VALUES (?, ?, ?, ?, ?, 'inactive')",
-        [userId, normalizedEmail, `$scrypt$${hashPassword(crypto.randomBytes(24).toString('hex'))}`, name, roleMap[role]]
+        "INSERT INTO users (id, email, password_hash, full_name, role, status) VALUES (?, ?, ?, ?, ?, 'active')",
+        [userId, normalizedEmail, `$scrypt$${hashPassword(String(password))}`, name, roleMap[role]]
       );
       await queryMySQL('INSERT INTO farm_memberships (farm_id, user_id, role, phone, invited_by_user_id) VALUES (?, ?, ?, ?, ?)', [farmId, userId, roleMap[role], phone || null, session.user.id]);
-      return res.status(201).json({ source: 'mysql', data: { id: userId, name, email: normalizedEmail, role, phone, status: 'invited' } });
+      return res.status(201).json({ source: 'mysql', data: { id: userId, name, email: normalizedEmail, role, phone, status: 'active' } });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }
