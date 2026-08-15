@@ -35,6 +35,21 @@ const midtransSnapBase = () => process.env.MIDTRANS_IS_PRODUCTION === 'true' ? '
 const midtransAuthorization = () => `Basic ${Buffer.from(`${process.env.MIDTRANS_SERVER_KEY || ''}:`).toString('base64')}`;
 
 const hashPassword = (password: string) => crypto.scryptSync(password, 'chicksync-local-salt', 64).toString('hex');
+const createPasswordHash = (password: string) => {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return `$scrypt$v2$${salt}$${crypto.scryptSync(password, salt, 64).toString('hex')}`;
+};
+const verifyPasswordHash = (password: string, storedHash: string) => {
+  if (storedHash.startsWith('$scrypt$v2$')) {
+    const [, , , salt, expectedHex] = storedHash.split('$');
+    if (!salt || !expectedHex) return false;
+    const actual = crypto.scryptSync(password, salt, 64);
+    const expected = Buffer.from(expectedHex, 'hex');
+    return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+  }
+  const legacy = `$scrypt$${hashPassword(password)}`;
+  return storedHash.length === legacy.length && crypto.timingSafeEqual(Buffer.from(storedHash), Buffer.from(legacy));
+};
 const hasSmtpConfig = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD && process.env.SMTP_FROM);
 const escapeHtml = (value: string) => value
   .replaceAll('&', '&amp;')
@@ -79,9 +94,58 @@ const getSession = (req: Request) => {
 
 async function startServer() {
   const app = express();
+  app.set('trust proxy', 1);
+  app.disable('x-powered-by');
+
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(self)');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'");
+    if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+  });
+
+  const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+  const rateLimit = (scope: string, limit: number, windowMs: number) => (req: Request, res: Response, next: () => void) => {
+    const key = `${scope}:${req.ip}`;
+    const now = Date.now();
+    const bucket = rateBuckets.get(key);
+    if (!bucket || bucket.resetAt <= now) rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    else {
+      bucket.count += 1;
+      if (bucket.count > limit) {
+        res.setHeader('Retry-After', String(Math.ceil((bucket.resetAt - now) / 1000)));
+        return res.status(429).json({ error: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' });
+      }
+    }
+    next();
+  };
 
   // Logo farm is stored as image data, so the default 100 KB JSON limit is too small.
   app.use(express.json({ limit: '2mb' }));
+  app.use('/api', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
+  app.use((req: Request, res: Response, next) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path === '/api/payments/midtrans/notification') return next();
+    const origin = req.get('origin');
+    if (!origin) return next();
+    const configuredOrigins = (process.env.ALLOWED_ORIGINS || process.env.APP_URL || '')
+      .split(',').map(value => value.trim()).filter(Boolean).map(value => new URL(value).origin);
+    const allowedOrigins = configuredOrigins.length ? configuredOrigins : [`${req.protocol}://${req.get('host')}`];
+    if (!allowedOrigins.includes(origin)) return res.status(403).json({ error: 'Origin permintaan tidak diizinkan.' });
+    next();
+  });
+  app.use('/api/auth/login', rateLimit('login', 10, 15 * 60_000));
+  app.use('/api/auth/register', rateLimit('register', 5, 60 * 60_000));
+  app.use('/api/auth/resend-verification', rateLimit('resend', 5, 60 * 60_000));
+  app.use('/api/ai', rateLimit('ai', 30, 60_000));
+  app.use('/api', rateLimit('api', 600, 60_000));
   app.use((error: any, _req: Request, res: Response, next: (error?: unknown) => void) => {
     if (error?.type === 'entity.too.large') return res.status(413).json({ error: 'Ukuran logo terlalu besar. Gunakan gambar maksimal 1 MB.' });
     next(error);
@@ -98,7 +162,7 @@ async function startServer() {
       `INSERT INTO users (id, email, password_hash, full_name, role, status)
        VALUES ('usr-saas-production', ?, ?, 'Super Admin PetelurKu.com', 'saas_owner', 'active')
        ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), full_name = VALUES(full_name), role = 'saas_owner', status = 'active'`,
-      [process.env.SAAS_OWNER_EMAIL.trim().toLowerCase(), `$scrypt$${hashPassword(process.env.SAAS_OWNER_PASSWORD)}`]
+      [process.env.SAAS_OWNER_EMAIL.trim().toLowerCase(), createPasswordHash(process.env.SAAS_OWNER_PASSWORD)]
     );
     console.info(`Akun SaaS Owner siap: ${process.env.SAAS_OWNER_EMAIL.trim().toLowerCase()}`);
   }
@@ -177,6 +241,7 @@ async function startServer() {
 
   // 2. Export Raw MySQL Schema SQL Script
   app.get('/api/mysql/schema', (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === 'production') return res.status(404).json({ error: 'Tidak ditemukan.' });
     const schemaPath = path.join(process.cwd(), 'src', 'db', 'schema.sql');
     if (fs.existsSync(schemaPath)) {
       const sqlContent = fs.readFileSync(schemaPath, 'utf8');
@@ -188,6 +253,7 @@ async function startServer() {
 
   // 2b. Database Migration Trigger Endpoint (Seeding SaaS Owner Data into MySQL)
   app.post('/api/migrate', async (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === 'production') return res.status(404).json({ error: 'Tidak ditemukan.' });
     const status = getMySQLStatus();
     if (status.isConnected) {
       try {
@@ -227,6 +293,7 @@ async function startServer() {
 
   // 2c. Users & Auth API for SaaS Owner
   app.get('/api/users', async (req: Request, res: Response) => {
+    if (getSession(req)?.user.role !== 'saas_owner') return res.status(403).json({ error: 'Khusus SaaS Owner.' });
     const status = getMySQLStatus();
     if (status.isConnected) {
       try {
@@ -254,10 +321,13 @@ async function startServer() {
           if (user.status !== 'active') {
             return res.status(403).json({ success: false, message: 'Email belum dikonfirmasi. Periksa email pendaftaran Anda.' });
           }
-          const validScryptPassword = user.password_hash.startsWith('$scrypt$') && user.password_hash === `$scrypt$${hashPassword(password || '')}`;
+          const validScryptPassword = user.password_hash.startsWith('$scrypt$') && verifyPasswordHash(password || '', user.password_hash);
           const allowDevelopmentSeed = process.env.NODE_ENV !== 'production' && !user.password_hash.startsWith('$scrypt$');
           if (!validScryptPassword && !allowDevelopmentSeed) {
             return res.status(401).json({ success: false, message: 'Password salah' });
+          }
+          if (validScryptPassword && !user.password_hash.startsWith('$scrypt$v2$')) {
+            await queryMySQL('UPDATE users SET password_hash = ? WHERE id = ?', [createPasswordHash(password || ''), user.id]);
           }
           const sessionUser = {
             id: user.id,
@@ -267,7 +337,7 @@ async function startServer() {
           };
           const sessionId = crypto.randomBytes(32).toString('hex');
           sessions.set(sessionId, { user: sessionUser, expiresAt: Date.now() + SESSION_TTL_MS });
-          res.cookie('chicksync_session', sessionId, { httpOnly: true, sameSite: 'lax', maxAge: SESSION_TTL_MS, path: '/' });
+          res.cookie('chicksync_session', sessionId, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: SESSION_TTL_MS, path: '/' });
           return res.json({
             success: true,
             source: 'mysql',
@@ -290,6 +360,15 @@ async function startServer() {
     if (!['basic', 'pro', 'enterprise'].includes(selectedPlan)) {
       return res.status(400).json({ success: false, message: 'Paket berlangganan tidak valid.' });
     }
+    if (!/^\S+@\S+\.\S+$/.test(String(email)) || String(email).length > 254) {
+      return res.status(400).json({ success: false, message: 'Format email tidak valid.' });
+    }
+    if (String(password).length < 10 || String(password).length > 128) {
+      return res.status(400).json({ success: false, message: 'Password harus terdiri dari 10 sampai 128 karakter.' });
+    }
+    if ([fullName, farmName, city].some(value => String(value).length > 120)) {
+      return res.status(400).json({ success: false, message: 'Data pendaftaran terlalu panjang.' });
+    }
     try {
       const existing: any[] = await queryMySQL('SELECT id FROM users WHERE email = ? LIMIT 1', [email.trim().toLowerCase()]);
       if (existing.length) return res.status(409).json({ success: false, message: 'Email sudah terdaftar. Silakan masuk.' });
@@ -300,7 +379,7 @@ async function startServer() {
       const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
       await queryMySQL(
         "INSERT INTO users (id, email, password_hash, full_name, role, status) VALUES (?, ?, ?, ?, 'farm_owner', 'inactive')",
-        [userId, email.trim().toLowerCase(), `$scrypt$${hashPassword(password)}`, fullName]
+        [userId, email.trim().toLowerCase(), createPasswordHash(password), fullName]
       );
       await queryMySQL(
         "INSERT INTO farms (id, owner_user_id, name, owner_name, city, subscription_plan, subscription_status, trial_ends_at, mrr_amount) VALUES (?, ?, ?, ?, ?, ?, 'trialing', DATE_ADD(NOW(), INTERVAL 15 DAY), 0)",
@@ -426,7 +505,7 @@ async function startServer() {
   app.post('/api/auth/logout', (req: Request, res: Response) => {
     const sessionId = getSessionId(req);
     if (sessionId) sessions.delete(sessionId);
-    res.clearCookie('chicksync_session', { path: '/' });
+    res.clearCookie('chicksync_session', { path: '/', httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
     return res.json({ success: true });
   });
 
@@ -773,7 +852,7 @@ async function startServer() {
       const userId = crypto.randomUUID();
       await queryMySQL(
         "INSERT INTO users (id, email, password_hash, full_name, role, status) VALUES (?, ?, ?, ?, ?, 'active')",
-        [userId, normalizedEmail, `$scrypt$${hashPassword(String(password))}`, name, roleMap[role]]
+        [userId, normalizedEmail, createPasswordHash(String(password)), name, roleMap[role]]
       );
       await queryMySQL('INSERT INTO farm_memberships (farm_id, user_id, role, phone, invited_by_user_id) VALUES (?, ?, ?, ?, ?)', [farmId, userId, roleMap[role], phone || null, session.user.id]);
       return res.status(201).json({ source: 'mysql', data: { id: userId, name, email: normalizedEmail, role, phone, status: 'active' } });
@@ -799,7 +878,7 @@ async function startServer() {
       const duplicate: any[] = await queryMySQL('SELECT id FROM users WHERE email = ? AND id <> ? LIMIT 1', [normalizedEmail, req.params.id]);
       if (duplicate.length) return res.status(409).json({ error: 'Email sudah digunakan pengguna lain.' });
       if (password) {
-        await queryMySQL('UPDATE users SET full_name = ?, email = ?, password_hash = ?, status = \'active\' WHERE id = ?', [name, normalizedEmail, `$scrypt$${hashPassword(password)}`, req.params.id]);
+        await queryMySQL('UPDATE users SET full_name = ?, email = ?, password_hash = ?, status = \'active\' WHERE id = ?', [name, normalizedEmail, createPasswordHash(password), req.params.id]);
       } else {
         await queryMySQL('UPDATE users SET full_name = ?, email = ? WHERE id = ?', [name, normalizedEmail, req.params.id]);
       }
@@ -915,46 +994,23 @@ async function startServer() {
   });
 
   app.get('/api/farms', async (req: Request, res: Response) => {
-    const status = getMySQLStatus();
-    if (status.isConnected) {
-      try {
+    try {
+      const session = getSession(req)!;
+      if (session.user.role === 'saas_owner') {
         const rows = await queryMySQL('SELECT * FROM farms ORDER BY created_at DESC');
         return res.json({ source: 'mysql', data: rows });
-      } catch (err: any) {
-        console.error('MySQL query error, using fallback:', err.message);
       }
+      const farmId = await getCurrentFarmId(session.user.id);
+      if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
+      const rows = await queryMySQL('SELECT * FROM farms WHERE id = ?', [farmId]);
+      return res.json({ source: 'mysql', data: rows });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Gagal mengambil data peternakan.' });
     }
-    return res.json({ source: 'memory_store', data: inMemoryStore.farms });
   });
 
-  app.post('/api/farms', async (req: Request, res: Response) => {
-    const newFarm = {
-      id: `farm-${Date.now()}`,
-      name: req.body.name || 'Peternakan Baru',
-      ownerName: req.body.ownerName || 'H. Yasin Yusuf',
-      city: req.body.city || 'Blitar',
-      subscriptionPlan: req.body.subscriptionPlan || 'pro',
-      subscriptionStatus: 'active',
-      mrrAmount: isSubscriptionPlan(req.body.subscriptionPlan) ? SUBSCRIPTION_PLANS[req.body.subscriptionPlan].monthlyPrice : SUBSCRIPTION_PLANS.pro.monthlyPrice,
-      createdAt: new Date().toISOString()
-    };
-
-    const status = getMySQLStatus();
-    if (status.isConnected) {
-      try {
-        await queryMySQL(
-          `INSERT INTO farms (id, owner_user_id, name, owner_name, city, subscription_plan, subscription_status, mrr_amount)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [newFarm.id, 'usr-farm-1', newFarm.name, newFarm.ownerName, newFarm.city, newFarm.subscriptionPlan, 'active', newFarm.mrrAmount]
-        );
-        return res.status(201).json({ source: 'mysql', data: newFarm });
-      } catch (err: any) {
-        console.error('MySQL insert failed:', err.message);
-      }
-    }
-
-    inMemoryStore.farms.unshift(newFarm);
-    return res.status(201).json({ source: 'memory_store', data: newFarm });
+  app.post('/api/farms', (_req: Request, res: Response) => {
+    return res.status(405).json({ error: 'Peternakan baru hanya dapat dibuat melalui proses registrasi owner.' });
   });
 
   // 4. Houses API (Kandang Ayam)
@@ -1533,11 +1589,14 @@ async function startServer() {
       return res.status(400).json({ error: 'amountKg harus lebih dari 0' });
     }
     try {
-      await queryMySQL(
-        'UPDATE feed_inventory SET current_stock_kg = current_stock_kg + ?, last_restocked_at = NOW() WHERE id = ?',
-        [amount, req.params.id]
+      const farmId = await getCurrentFarmId(getSession(req)!.user.id);
+      if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
+      const result: any = await queryMySQL(
+        'UPDATE feed_inventory SET current_stock_kg = current_stock_kg + ?, last_restocked_at = NOW() WHERE id = ? AND farm_id = ?',
+        [amount, req.params.id, farmId]
       );
-      const rows: any[] = await queryMySQL('SELECT * FROM feed_inventory WHERE id = ?', [req.params.id]);
+      if (!result.affectedRows) return res.status(404).json({ error: 'Pakan tidak ditemukan' });
+      const rows: any[] = await queryMySQL('SELECT * FROM feed_inventory WHERE id = ? AND farm_id = ?', [req.params.id, farmId]);
       if (!rows.length) return res.status(404).json({ error: 'Pakan tidak ditemukan' });
       return res.json({ source: 'mysql', data: rows[0] });
     } catch (err: any) {
@@ -1577,22 +1636,23 @@ async function startServer() {
 
   // 7. Medical & Vaccination API
   app.get('/api/vaccinations', async (req: Request, res: Response) => {
-    const status = getMySQLStatus();
-    if (status.isConnected) {
-      try {
-        const rows = await queryMySQL('SELECT * FROM vaccination_logs ORDER BY scheduled_date ASC');
-        return res.json({ source: 'mysql', data: rows });
-      } catch (err: any) {
-        console.error('MySQL vaccination query error:', err.message);
-      }
+    try {
+      const farmId = await getCurrentFarmId(getSession(req)!.user.id);
+      if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
+      const rows = await queryMySQL('SELECT vl.* FROM vaccination_logs vl INNER JOIN houses h ON h.id = vl.house_id WHERE h.farm_id = ? ORDER BY vl.scheduled_date ASC', [farmId]);
+      return res.json({ source: 'mysql', data: rows });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Gagal mengambil jadwal vaksinasi.' });
     }
-    return res.json({ source: 'memory_store', data: inMemoryStore.vaccinations });
   });
 
   app.post('/api/vaccinations', async (req: Request, res: Response) => {
     const data = req.body;
     const id = `vac-${Date.now()}`;
     try {
+      const farmId = await getCurrentFarmId(getSession(req)!.user.id);
+      const houses: any[] = await queryMySQL('SELECT id FROM houses WHERE id = ? AND farm_id = ?', [data.coopId, farmId]);
+      if (!houses.length) return res.status(404).json({ error: 'Kandang tidak ditemukan.' });
       await queryMySQL(
         `INSERT INTO vaccination_logs (id, house_id, vaccine_name, disease_target, scheduled_date, status, vet_name, notes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -1606,19 +1666,23 @@ async function startServer() {
 
   app.patch('/api/vaccinations/:id/complete', async (req: Request, res: Response) => {
     try {
-      await queryMySQL(
-        "UPDATE vaccination_logs SET status = 'completed', administered_date = CURDATE(), vet_name = ? WHERE id = ?",
-        [req.body.vetName || null, req.params.id]
+      const farmId = await getCurrentFarmId(getSession(req)!.user.id);
+      const result: any = await queryMySQL(
+        "UPDATE vaccination_logs vl INNER JOIN houses h ON h.id = vl.house_id SET vl.status = 'completed', vl.administered_date = CURDATE(), vl.vet_name = ? WHERE vl.id = ? AND h.farm_id = ?",
+        [req.body.vetName || null, req.params.id, farmId]
       );
+      if (!result.affectedRows) return res.status(404).json({ error: 'Jadwal vaksinasi tidak ditemukan.' });
       return res.json({ source: 'mysql', success: true });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
   });
 
-  app.get('/api/health-logs', async (_req: Request, res: Response) => {
+  app.get('/api/health-logs', async (req: Request, res: Response) => {
     try {
-      const rows = await queryMySQL('SELECT * FROM health_logs ORDER BY record_date DESC LIMIT 100');
+      const farmId = await getCurrentFarmId(getSession(req)!.user.id);
+      if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
+      const rows = await queryMySQL('SELECT hl.* FROM health_logs hl INNER JOIN houses h ON h.id = hl.house_id WHERE h.farm_id = ? ORDER BY hl.record_date DESC LIMIT 100', [farmId]);
       return res.json({ source: 'mysql', data: rows });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
@@ -1629,12 +1693,16 @@ async function startServer() {
     const data = req.body;
     const id = `health-${Date.now()}`;
     try {
+      const session = getSession(req)!;
+      const farmId = await getCurrentFarmId(session.user.id);
+      const houses: any[] = await queryMySQL('SELECT id FROM houses WHERE id = ? AND farm_id = ?', [data.coopId, farmId]);
+      if (!houses.length) return res.status(404).json({ error: 'Kandang tidak ditemukan.' });
       await queryMySQL(
         `INSERT INTO health_logs (id, house_id, record_date, mortality_count, culled_count, symptoms, diagnosis, treatment_given, medication_cost, vet_notes, recorded_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, data.coopId, data.date, data.mortalityCount || 0, data.culledCount || 0, JSON.stringify(data.symptoms || []), data.diagnosis || null, data.treatmentGiven || null, data.medicationCost || null, data.vetNotes || null, data.recordedBy || 'Anak Kandang']
+        [id, data.coopId, data.date, data.mortalityCount || 0, data.culledCount || 0, JSON.stringify(data.symptoms || []), data.diagnosis || null, data.treatmentGiven || null, data.medicationCost || null, data.vetNotes || null, session.user.name]
       );
-      await queryMySQL('UPDATE houses SET current_chickens = GREATEST(0, current_chickens - ?) WHERE id = ?', [(data.mortalityCount || 0) + (data.culledCount || 0), data.coopId]);
+      await queryMySQL('UPDATE houses SET current_chickens = GREATEST(0, current_chickens - ?) WHERE id = ? AND farm_id = ?', [(data.mortalityCount || 0) + (data.culledCount || 0), data.coopId, farmId]);
       return res.status(201).json({ source: 'mysql', data: { ...data, id } });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
@@ -1643,26 +1711,30 @@ async function startServer() {
 
   // 8. Financial Transactions API
   app.get('/api/finances', async (req: Request, res: Response) => {
-    const status = getMySQLStatus();
-    if (status.isConnected) {
-      try {
-        const rows = await queryMySQL('SELECT * FROM financial_records ORDER BY transaction_date DESC');
-        return res.json({ source: 'mysql', data: rows });
-      } catch (err: any) {
-        console.error('MySQL finance query error:', err.message);
-      }
+    const session = getSession(req)!;
+    if (!['owner', 'manager'].includes(session.user.role)) return res.status(403).json({ error: 'Anda tidak memiliki akses ke data keuangan.' });
+    try {
+      const farmId = await getCurrentFarmId(session.user.id);
+      if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
+      const rows = await queryMySQL('SELECT * FROM financial_records WHERE farm_id = ? ORDER BY transaction_date DESC', [farmId]);
+      return res.json({ source: 'mysql', data: rows });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Gagal mengambil data keuangan.' });
     }
-    return res.json({ source: 'memory_store', data: inMemoryStore.finances });
   });
 
   app.post('/api/finances', async (req: Request, res: Response) => {
     const data = req.body;
     const id = `fin-${Date.now()}`;
     try {
+      const session = getSession(req)!;
+      if (!['owner', 'manager'].includes(session.user.role)) return res.status(403).json({ error: 'Anda tidak memiliki akses untuk mencatat keuangan.' });
+      const farmId = await getCurrentFarmId(session.user.id);
+      if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
       await queryMySQL(
         `INSERT INTO financial_records (id, farm_id, transaction_type, category, amount, transaction_date, description)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, data.farmId || 'farm-barokah-01', data.type, data.category, data.amount, data.date, data.description]
+        [id, farmId, data.type, data.category, data.amount, data.date, data.description]
       );
       return res.status(201).json({ source: 'mysql', data: { ...data, id } });
     } catch (err: any) {
