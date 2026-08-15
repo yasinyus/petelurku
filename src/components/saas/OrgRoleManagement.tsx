@@ -135,7 +135,7 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Users className="w-5 h-5 text-emerald-600" />
-            Manajemen Peran & Pengguna Organisasi SaaS
+            Manajemen Peran dan Pengguna
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             Atur hak akses staf peternakan (Owner, Manager, Anak Kandang, Dokter Hewan) secara mandiri.
@@ -166,7 +166,7 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
             <div className="flex items-center gap-2 font-bold text-amber-800">
               <Crown className="w-4 h-4 text-amber-600" /> Pemilik (Owner)
             </div>
-            <p className="text-[11px] text-slate-500">Akses Penuh: Kelola billing SaaS, tambah/hapus anggota, atur E2EE, ekspor laporan.</p>
+            <p className="text-[11px] text-slate-500">Akses penuh: kelola tagihan, tambah atau hapus anggota, serta ekspor laporan.</p>
           </div>
 
           <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">

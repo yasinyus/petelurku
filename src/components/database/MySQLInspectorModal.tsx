@@ -64,12 +64,12 @@ export const MySQLInspectorModal: React.FC<MySQLInspectorModalProps> = ({ isOpen
 
   const handleRunMigration = async () => {
     setIsMigrating(true);
-    setMigrationLog('⏳ Menjalankan script migrasi tabel & seeding akun SaaS Owner...');
+    setMigrationLog('⏳ Menjalankan migrasi tabel dan data awal admin...');
     const result = await ApiService.runMigration();
     setIsMigrating(false);
     if (result && result.success) {
       setMigrationLog(
-        `✅ MIGRASI SUKSES!\nEngine: ${result.source.toUpperCase()}\nStatus: ${result.message}\n\nAkun Owner SaaS Terdaftar:\n- Email: admin@chicksync.saas\n- Role: saas_owner\n- Nama: Super Admin PetelurKu.com`
+        `✅ MIGRASI SUKSES!\nEngine: ${result.source.toUpperCase()}\nStatus: ${result.message}\n\nAkun Admin Terdaftar:\n- Email: admin@chicksync.saas\n- Role: admin\n- Nama: Super Admin PetelurKu.com`
       );
     } else {
       setMigrationLog(`❌ MIGRASI GAGAL: ${result?.message || 'Error tidak diketahui'}`);
@@ -152,7 +152,7 @@ export const MySQLInspectorModal: React.FC<MySQLInspectorModalProps> = ({ isOpen
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Layers className="w-4 h-4 text-emerald-600" /> 🚀 Migrasi Data SaaS Owner
+            <Layers className="w-4 h-4 text-emerald-600" /> 🚀 Migrasi Data Admin
           </button>
         </div>
 
@@ -278,7 +278,7 @@ export const MySQLInspectorModal: React.FC<MySQLInspectorModalProps> = ({ isOpen
                   <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px] mr-2">GET</span>
                   <span className="bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded text-[10px] mr-2">POST</span>
                   <span className="font-mono font-bold text-slate-900">/api/farms</span>
-                  <p className="text-[11px] text-slate-500 mt-0.5">CRUD data peternakan & tenant SaaS</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Kelola data peternakan dan pelanggan</p>
                 </div>
                 <a href="/api/farms" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-[11px] font-bold flex items-center gap-1">
                   Data JSON <ExternalLink className="w-3 h-3" />
@@ -309,9 +309,9 @@ export const MySQLInspectorModal: React.FC<MySQLInspectorModalProps> = ({ isOpen
                   🚀
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-emerald-950">Migrasi Data SaaS Owner & Database Schema</h3>
+                  <h3 className="font-bold text-sm text-emerald-950">Migrasi Data Admin dan Skema Database</h3>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Fitur ini akan mengeksekusi migrasi skema tabel MySQL lengkap (`schema.sql`) dan secara otomatis membuat akun <strong>SaaS Owner (Super Admin)</strong> dengan kredensial <code>admin@chicksync.saas</code> agar Anda dapat langsung login dan mengelola seluruh tenant peternakan.
+                    Fitur ini menjalankan skema tabel MySQL dan membuat akun <strong>Super Admin</strong> agar Anda dapat mengelola seluruh pelanggan peternakan.
                   </p>
                 </div>
               </div>

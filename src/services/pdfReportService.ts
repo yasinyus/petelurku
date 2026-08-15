@@ -195,6 +195,6 @@ export class PdfReportService {
       yPos += 7;
     });
 
-    doc.save(`Laporan_Keuangan_SaaS_${org.name.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Laporan_Keuangan_${org.name.replace(/\s+/g, '_')}.pdf`);
   }
 }

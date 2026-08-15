@@ -3,7 +3,7 @@ import { Coop, EggProductionLog, FeedItem, FeedLog, FinancialTransaction, Health
 export const INITIAL_USERS: User[] = [
   {
     id: 'usr-saas-1',
-    name: 'Super Admin PetelurKu.com (Pemilik SaaS)',
+    name: 'Super Admin PetelurKu.com',
     email: 'admin@chicksync.saas',
     role: 'owner',
     avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',

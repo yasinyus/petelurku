@@ -415,7 +415,7 @@ export default function App() {
     };
     setOrg(updatedOrg);
     StorageService.saveOrg(updatedOrg);
-    showToast(`Selamat! Paket SaaS ditingkatkan ke Plan ${newPlan.toUpperCase()}`);
+    showToast(`Selamat! Paket ditingkatkan ke Plan ${newPlan.toUpperCase()}`);
   };
 
   // Force Sync Handler
@@ -484,11 +484,8 @@ export default function App() {
         onForceSync={handleForceSync}
         notifications={notifications}
         onOpenNotifications={() => setIsNotifDrawerOpen(true)}
-        onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
-        onOpenMySQLModal={() => setIsMySQLModalOpen(true)}
         onOpenBillingModal={() => setActiveTab('billing')}
         onGoToLanding={() => setViewMode('landing')}
-        onSelectSaaSOwnerTab={() => setActiveTab('saas_owner')}
         onOpenProfile={() => setActiveTab('profile')}
         onLogout={handleLogout}
       />
@@ -664,15 +661,15 @@ export default function App() {
 
           {activeTab === 'security' && (
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
-              <h2 className="text-lg font-bold text-slate-900 mb-2">Keamanan Data & E2EE Cloud Sync</h2>
+              <h2 className="text-lg font-bold text-slate-900 mb-2">Keamanan dan Pencadangan Data</h2>
               <p className="text-xs text-slate-500 mb-4">
-                Pengaturan kunci enkripsi AES-256 dan simulasi sinkronisasi perangkat.
+                Pengaturan perlindungan data dan sinkronisasi perangkat.
               </p>
               <button
                 onClick={() => setIsSecurityModalOpen(true)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer"
               >
-                Buka Panel Kontrol Keamanan E2EE
+                Buka Panel Keamanan
               </button>
             </div>
           )}
@@ -691,7 +688,7 @@ export default function App() {
                 </div>
                 <h3 className="text-lg font-bold text-slate-900">Akses Dibatasi</h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  Halaman 'Pemilik SaaS (Admin)' hanya dapat diakses oleh pengguna dengan role <strong>Owner</strong> (Pemilik Peternakan / Admin SaaS).
+                  Halaman Admin Platform hanya dapat diakses oleh pengguna dengan role <strong>Owner</strong>.
                 </p>
               </div>
             )

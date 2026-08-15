@@ -104,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     { 
       id: 'billing', 
-      label: 'Langganan SaaS', 
+      label: 'Langganan', 
       icon: <CreditCard className="w-4 h-4" /> 
     },
     { 
@@ -121,7 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     { 
       id: 'saas_owner', 
-      label: 'Pemilik SaaS (Admin)', 
+      label: 'Admin Platform', 
       icon: <Building2 className="w-4 h-4 text-emerald-600" />,
       badge: 'PRO',
       badgeColor: 'bg-emerald-100 text-emerald-800 font-bold border border-emerald-200',
@@ -232,7 +232,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span>Keamanan Terjamin</span>
         </div>
         <p className="text-[11px] text-slate-300 leading-relaxed">
-          Data kandang & transaksi dienkripsi E2EE secara lokal sebelum disinkronkan ke Cloud.
+          Data kandang dan transaksi dilindungi serta dicadangkan secara aman.
         </p>
       </div>
     </aside>

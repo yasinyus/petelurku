@@ -338,16 +338,16 @@ export const SaaSOwnerDashboard: React.FC = () => {
             <div className="flex items-center gap-2 mb-1.5">
               <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                Super Admin Platform SaaS
+                Super Admin Platform
               </span>
               <span className="text-slate-400 text-xs font-mono">• PetelurKu.com Cloud Engine</span>
             </div>
             <h1 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
               <Building2 className="w-6 h-6 text-emerald-600" />
-              Dashboard Eksekutif Pemilik SaaS
+              Dashboard Eksekutif Admin
             </h1>
             <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-              Pusat kendali utama platform: pantau total pendapatan berulang (MRR/ARR), perkembangan pelanggan peternakan, status pembayaran gateway, dan distribusi lisensi SaaS secara real-time.
+              Pusat kendali utama: pantau pendapatan berulang, perkembangan pelanggan peternakan, status pembayaran, dan distribusi lisensi secara real-time.
             </p>
           </div>
 
@@ -356,10 +356,10 @@ export const SaaSOwnerDashboard: React.FC = () => {
               onClick={handleRunDataMigration}
               disabled={isMigrating}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition cursor-pointer shadow-xs"
-              title="Jalankan Skrip Migrasi Data Owner & Seeding SaaS"
+              title="Jalankan migrasi dan data awal admin"
             >
               <RefreshCw className={`w-4 h-4 ${isMigrating ? 'animate-spin' : ''}`} />
-              {isMigrating ? 'Migrasi...' : 'Migrasi Data SaaS Owner'}
+              {isMigrating ? 'Migrasi...' : 'Migrasi Data Admin'}
             </button>
 
             <button
@@ -418,7 +418,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-500 mb-2">
-              <span className="text-xs font-medium">Pelanggan SaaS Terdaftar</span>
+              <span className="text-xs font-medium">Pelanggan Terdaftar</span>
               <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
                 <Users className="w-4 h-4" />
               </div>
@@ -483,7 +483,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
                 <TrendingUp className="w-4 h-4 text-emerald-600" />
                 Tren Pertumbuhan MRR (Monthly Recurring Revenue)
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">Pertumbuhan pendapatan SaaS 6 bulan terakhir</p>
+              <p className="text-xs text-slate-500 mt-0.5">Pertumbuhan pendapatan 6 bulan terakhir</p>
             </div>
             <span className="text-xs font-mono text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
               Target Q3: Rp 55 Jt
@@ -573,7 +573,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
 
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
             <div className="font-bold text-slate-800 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Insight Strategis SaaS:
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Insight Strategis:
             </div>
             <p>Paket Pro & Enterprise menyumbang <strong>82.5%</strong> dari total MRR platform Anda.</p>
           </div>
@@ -608,7 +608,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
               }`}
             >
               <CreditCard className="w-4 h-4" />
-              Riwayat Pembayaran SaaS ({transactions.length})
+              Riwayat Pembayaran ({transactions.length})
             </button>
 
             <button
@@ -674,7 +674,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                     <th className="py-3 px-4">Nama Peternakan</th>
                     <th className="py-3 px-4">Pemilik & Kontak</th>
-                    <th className="py-3 px-4">Paket SaaS</th>
+                    <th className="py-3 px-4">Paket</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4">Skala Kandang</th>
                     <th className="py-3 px-4">MRR Tenant</th>
@@ -772,7 +772,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-slate-900 text-sm">Riwayat Transaksi Gateway (Midtrans & Xendit)</h3>
-                <p className="text-slate-500 text-[11px]">Log otomatis webhook callback pembayaran langganan SaaS</p>
+                <p className="text-slate-500 text-[11px]">Log otomatis pembayaran langganan</p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -962,7 +962,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Pilih Paket SaaS</label>
+                  <label className="block text-slate-700 font-semibold mb-1">Pilih Paket</label>
                   <select
                     value={newPlan}
                     onChange={(e) => setNewPlan(e.target.value as SubscriptionPlan)}

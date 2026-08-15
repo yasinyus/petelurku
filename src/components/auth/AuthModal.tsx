@@ -146,7 +146,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             }`}
           >
             <Crown className="w-4 h-4 text-amber-600" />
-            Portal Pemilik SaaS (Admin)
+            Portal Admin
           </button>
         </div>
 
@@ -166,7 +166,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </h2>
           <p className="text-slate-500 mt-1">
             {userType === 'saas_owner'
-              ? 'Kelola sistem berlangganan, tenant peternakan, dan arus kas platform SaaS.'
+              ? 'Kelola sistem berlangganan, peternakan, dan arus kas platform.'
               : mode === 'login'
               ? 'Akses catatan produksi panen, stok pakan, dan rekam medis kandang.'
               : 'Mulai uji coba gratis 14 hari tanpa kartu kredit.'}
@@ -203,7 +203,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               className="px-2.5 py-1.5 bg-white border border-amber-300 hover:bg-amber-100/50 rounded-lg text-[11px] font-bold text-amber-900 text-left transition cursor-pointer"
             >
               🛡️ Super Admin
-              <div className="text-[9px] text-slate-500 font-normal">Pemilik SaaS</div>
+              <div className="text-[9px] text-slate-500 font-normal">Admin Platform</div>
             </button>
           </div>
         </div>
@@ -244,7 +244,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Pilih Paket SaaS</label>
+                  <label className="block text-slate-700 font-semibold mb-1">Pilih Paket</label>
                   <select
                     value={selectedPlan}
                     onChange={(e) => setSelectedPlan(e.target.value as SubscriptionPlan)}
@@ -332,7 +332,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <span>Memproses Verifikasi...</span>
             ) : userType === 'saas_owner' ? (
               <>
-                <ShieldCheck className="w-4 h-4" /> Masuk Portal Pemilik SaaS
+                <ShieldCheck className="w-4 h-4" /> Masuk Portal Admin
               </>
             ) : mode === 'login' ? (
               <>
@@ -340,7 +340,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </>
             ) : (
               <>
-                Daftar & Aktifkan Uji Coba SaaS <CheckCircle2 className="w-4 h-4" />
+                Daftar & Aktifkan Uji Coba <CheckCircle2 className="w-4 h-4" />
               </>
             )}
           </button>

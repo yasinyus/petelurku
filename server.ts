@@ -97,7 +97,7 @@ async function startServer() {
   const inMemoryStore = {
     users: [
       { id: 'usr-saas-1', email: 'admin@chicksync.saas', fullName: 'Super Admin ChickSync', role: 'saas_owner', status: 'active' },
-      { id: 'usr-owner-1', email: 'owner@chicksync.saas', fullName: 'Pemilik SaaS ChickSync', role: 'saas_owner', status: 'active' },
+      { id: 'usr-owner-1', email: 'owner@chicksync.saas', fullName: 'Admin PetelurKu.com', role: 'saas_owner', status: 'active' },
       { id: 'usr-farm-1', email: 'yasin@barokahfarm.id', fullName: 'H. Yasin Yusuf', role: 'farm_owner', status: 'active' }
     ],
     farms: [
@@ -196,7 +196,7 @@ async function startServer() {
     return res.json({
       success: true,
       source: 'memory_store',
-      message: 'Migrasi data berhasil! Akun Pemilik SaaS (Super Admin) & Data Peternakan sudah terpasang.',
+      message: 'Migrasi data berhasil! Akun Super Admin dan data peternakan sudah terpasang.',
       saasOwnerAccount: {
         email: 'admin@chicksync.saas',
         role: 'saas_owner',

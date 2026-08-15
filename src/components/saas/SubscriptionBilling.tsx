@@ -87,7 +87,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
           </div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-emerald-600" />
-            Langganan SaaS & Integrasi Pembayaran Otomatis
+            Langganan dan Pembayaran Otomatis
           </h2>
         </div>
         <div className="text-right">

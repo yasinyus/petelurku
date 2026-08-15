@@ -54,7 +54,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             </div>
             <div>
               <div className="font-extrabold text-slate-900 text-base leading-tight tracking-tight flex items-center gap-1.5">
-                PetelurKu.com <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">SaaS Layer</span>
+                PetelurKu.com
               </div>
               <p className="text-[10px] text-slate-500 font-medium">Sistem Manajemen Peternakan Ayam Petelur</p>
             </div>
@@ -63,11 +63,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600">
             <a href="#features" className="hover:text-emerald-700 transition">Fitur Utama</a>
-            <a href="#pricing" className="hover:text-emerald-700 transition">Paket SaaS</a>
+            <a href="#pricing" className="hover:text-emerald-700 transition">Paket</a>
             <a href="#security" className="hover:text-emerald-700 transition">Keamanan E2EE</a>
             <a href="#saas-owner" className="hover:text-emerald-700 transition flex items-center gap-1">
               <Crown className="w-3.5 h-3.5 text-amber-600" />
-              Untuk Pemilik SaaS
+              Untuk Admin
             </a>
           </nav>
 
@@ -78,7 +78,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               className="px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer hidden sm:flex items-center gap-1.5"
             >
               <Crown className="w-3.5 h-3.5 text-amber-600" />
-              Admin SaaS
+              Admin
             </button>
 
             <button
@@ -108,15 +108,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             
             <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-full text-emerald-800 text-xs font-bold shadow-2xs">
               <Sparkles className="w-4 h-4 text-emerald-600" />
-              Platform SaaS B2B Manajemen Peternakan Ayam Petelur Terdepan
+              Platform Manajemen Peternakan Ayam Petelur
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-              Kelola Ribuan Ayam Petelur & Bisnis SaaS Peternakan Secara <span className="text-emerald-600 underline decoration-emerald-300 decoration-wavy">Presisi</span>
+              Kelola Ribuan Ayam Petelur Secara <span className="text-emerald-600 underline decoration-emerald-300 decoration-wavy">Presisi</span>
             </h1>
 
             <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
-              Otomatiskan pencatatan Hen Day Production (HDP %), analisis HPP pakan per butir telur, jadwal vaksinasi dokter hewan, hingga laporan keuangan & penagihan SaaS otomatis via Midtrans & Xendit.
+              Otomatiskan pencatatan Hen Day Production (HDP %), analisis HPP pakan per butir telur, jadwal vaksinasi, hingga laporan keuangan peternakan.
             </p>
 
             {/* CTAs */}
@@ -133,7 +133,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                 className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
               >
                 <Crown className="w-4 h-4 text-amber-600" />
-                Demo Dashboard Pemilik SaaS
+                Demo Dashboard Admin
               </button>
             </div>
 
@@ -197,7 +197,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
           
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Fitur Lengkap untuk Peternak & Pengelola SaaS
+              Fitur Lengkap untuk Peternak
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
               Setiap modul dirancang khusus menjawab kebutuhan peternakan ayam bertelur modern di Indonesia.
@@ -266,7 +266,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
                 <Crown className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Portal Pemilik SaaS (Super Admin)</h3>
+              <h3 className="text-base font-bold text-slate-900">Portal Admin Platform</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
                 Khusus pemilik platform: pantau total pendapatan berulang (MRR/ARR), kelola tenant peternakan, simulasi webhook Midtrans/Xendit, & siarkan pengumuman.
               </p>
@@ -283,7 +283,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
           
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Pilihan Paket Langganan SaaS
+              Pilihan Paket Langganan
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
               Pilih paket yang paling sesuai dengan skala peternakan Anda. Uji coba gratis 14 hari.
@@ -473,7 +473,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             <div className="w-7 h-7 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center font-black">
               🥚
             </div>
-            <span className="font-bold text-slate-100">PetelurKu.com SaaS Platform &copy; 2026</span>
+            <span className="font-bold text-slate-100">PetelurKu.com &copy; 2026</span>
           </div>
 
           <div className="flex items-center gap-6">
@@ -482,7 +482,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             </button>
             <button onClick={() => openAuth('login', 'saas_owner')} className="hover:text-amber-400 cursor-pointer flex items-center gap-1">
               <Crown className="w-3.5 h-3.5 text-amber-400" />
-              Portal Pemilik SaaS
+              Portal Admin
             </button>
           </div>
         </div>

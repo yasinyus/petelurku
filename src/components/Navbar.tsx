@@ -6,7 +6,6 @@ import {
   RefreshCw, 
   Bell, 
   Building2, 
-  Lock,
   Zap,
   LogOut,
   Egg
@@ -20,11 +19,8 @@ interface NavbarProps {
   onForceSync: () => void;
   notifications: NotificationItem[];
   onOpenNotifications: () => void;
-  onOpenSecurityModal: () => void;
   onOpenBillingModal: () => void;
-  onOpenMySQLModal?: () => void;
   onGoToLanding?: () => void;
-  onSelectSaaSOwnerTab?: () => void;
   dataMode?: 'demo' | 'real';
   onToggleDataMode?: () => void;
   onLogout?: () => void;
@@ -38,11 +34,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onForceSync,
   notifications,
   onOpenNotifications,
-  onOpenSecurityModal,
   onOpenBillingModal,
-  onOpenMySQLModal,
   onGoToLanding,
-  onSelectSaaSOwnerTab,
   dataMode = 'demo',
   onToggleDataMode,
   onLogout,
@@ -73,9 +66,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 PetelurKu.com
               </button>
-              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">
-                SaaS Layer
-              </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500">
               <Building2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -118,41 +108,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             )
           )}
           
-          {/* Quick Landing Page Link */}
-          {onGoToLanding && (
-            <button
-              onClick={onGoToLanding}
-              className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition cursor-pointer"
-            >
-              Halaman Depan
-            </button>
-          )}
-          
-          {/* MySQL Database & API Inspector Badge */}
-          {onOpenMySQLModal && (
-            <button
-              onClick={onOpenMySQLModal}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold hover:bg-blue-100 transition cursor-pointer"
-              title="Inspeksi Database MySQL & REST API"
-            >
-              <span className="text-blue-600 font-extrabold">🐬</span>
-              <span>MySQL DB & API</span>
-            </button>
-          )}
-
-          {/* E2EE Encryption Badge */}
-          <button
-            onClick={onOpenSecurityModal}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium hover:bg-emerald-100 transition cursor-pointer"
-            title="Sistem Terenkripsi E2EE AES-256"
-          >
-            <Lock className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-            <span className="hidden md:inline">E2EE AES-256</span>
-            <span className="bg-emerald-200/60 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded font-mono font-semibold">
-              Aktif
-            </span>
-          </button>
-
           {/* Online/Offline & Real-Time Sync Indicator */}
           <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs">
             {syncStatus.isOnline ? (
@@ -208,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="hidden xl:flex items-center gap-1.5 border-l border-slate-200 pl-2">
               <span className="rounded-md bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">PLAN {org.plan.toUpperCase()}</span>
               {isTrial ? (
-                <button onClick={onOpenBillingModal} className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 cursor-pointer hover:bg-amber-200" title="Buka Langganan SaaS">STATUS: TRIAL</button>
+                <button onClick={onOpenBillingModal} className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 cursor-pointer hover:bg-amber-200" title="Buka Langganan">STATUS: TRIAL</button>
               ) : (
                 <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">STATUS: {subscriptionStatus.toUpperCase()}</span>
               )}

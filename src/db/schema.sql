@@ -232,7 +232,7 @@ CREATE TABLE IF NOT EXISTS `saas_subscriptions` (
 -- Insert Default Seed Data for Testing & Demo
 INSERT IGNORE INTO `users` (`id`, `email`, `password_hash`, `full_name`, `role`, `status`) VALUES
 ('usr-saas-1', 'admin@chicksync.saas', 'hash_secret_123', 'Super Admin PetelurKu.com', 'saas_owner', 'active'),
-('usr-owner-1', 'owner@chicksync.saas', 'hash_secret_owner', 'Pemilik SaaS PetelurKu.com', 'saas_owner', 'active'),
+('usr-owner-1', 'owner@chicksync.saas', 'hash_secret_owner', 'Admin PetelurKu.com', 'saas_owner', 'active'),
 ('usr-farm-1', 'yasin@barokahfarm.id', 'hash_secret_456', 'H. Yasin Yusuf', 'farm_owner', 'active');
 
 INSERT IGNORE INTO `farms` (`id`, `owner_user_id`, `name`, `owner_name`, `city`, `subscription_plan`, `subscription_status`, `mrr_amount`) VALUES
