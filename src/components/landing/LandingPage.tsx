@@ -23,11 +23,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register'>('login');
   const [authInitialType, setAuthInitialType] = useState<'peternak' | 'saas_owner'>('peternak');
+  const [authInitialPlan, setAuthInitialPlan] = useState<'basic' | 'pro' | 'enterprise'>('pro');
 
   const openAuth = (mode: 'login' | 'register', type: 'peternak' | 'saas_owner' = 'peternak') => {
     setAuthInitialMode(mode);
     setAuthInitialType(type);
     setShowAuthModal(true);
+  };
+
+  const openPlanRegistration = (plan: 'basic' | 'pro' | 'enterprise') => {
+    setAuthInitialPlan(plan);
+    openAuth('register', 'peternak');
   };
 
   return (
@@ -108,7 +114,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
               <button
-                onClick={() => openAuth('register', 'peternak')}
+                onClick={() => openPlanRegistration('pro')}
                 className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition cursor-pointer shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
               >
                 Mulai Gratis 15 Hari <ArrowRight className="w-4 h-4" />
@@ -284,7 +290,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                 <span className="text-xs font-bold text-slate-500 uppercase">Peternakan Pemula</span>
                 <h3 className="text-xl font-extrabold text-slate-900 mt-1">Paket Basic</h3>
                 <div className="text-2xl font-black text-slate-900 mt-2">
-                  Rp 750.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
+                  Rp 49.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
                 </div>
 
                 <ul className="mt-5 space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4">
@@ -292,19 +298,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Maksimal 2 Kandang Ayam
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Pencatatan Panen & HDP
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Produksi Telur & HDP
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Manajemen Stok Pakan
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Stok dan Biaya Pakan
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> 2 Anggota Tim (Owner & Worker)
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> 2 Pengguna Termasuk Owner
                   </li>
                 </ul>
               </div>
 
               <button
-                onClick={() => openAuth('register', 'peternak')}
+                onClick={() => openPlanRegistration('basic')}
                 className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition cursor-pointer"
               >
                 Pilih Paket Basic
@@ -321,7 +327,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                 <span className="text-xs font-bold text-emerald-700 uppercase">Peternakan Skala Menengah</span>
                 <h3 className="text-xl font-extrabold text-slate-900 mt-1">Paket Pro</h3>
                 <div className="text-2xl font-black text-slate-900 mt-2">
-                  Rp 1.500.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
+                  Rp 99.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
                 </div>
 
                 <ul className="mt-5 space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4">
@@ -329,22 +335,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Maksimal 10 Kandang Ayam
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Semua Fitur Basic + HPP Pakan
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Semua Fitur Basic
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Rekam Medis & Dokter Hewan
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Kelola Akses Petugas Kandang
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Ekspor Laporan PDF Standar A4
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Laporan Produksi & Keuangan PDF
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Up to 10 Anggota Tim
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Maksimal 10 Pengguna
                   </li>
                 </ul>
               </div>
 
               <button
-                onClick={() => openAuth('register', 'peternak')}
+                onClick={() => openPlanRegistration('pro')}
                 className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition cursor-pointer shadow-xs"
               >
                 Mulai Uji Coba Pro Gratis
@@ -354,10 +360,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             {/* Enterprise Plan */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5 flex flex-col justify-between shadow-2xs">
               <div>
-                <span className="text-xs font-bold text-purple-700 uppercase">Perusahaan Poultry Besar</span>
-                <h3 className="text-xl font-extrabold text-slate-900 mt-1">Enterprise</h3>
+                <span className="text-xs font-bold text-purple-700 uppercase">Peternakan Berkembang</span>
+                <h3 className="text-xl font-extrabold text-slate-900 mt-1">Paket Bisnis</h3>
                 <div className="text-2xl font-black text-slate-900 mt-2">
-                  Rp 2.500.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
+                  Rp 199.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
                 </div>
 
                 <ul className="mt-5 space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4">
@@ -365,22 +371,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Tanpa Batasan Jumlah Kandang
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Semua Fitur Pro + Multi-Farm
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Semua Fitur Pro
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Prioritas Support 24/7 & Training
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Maksimal 30 Pengguna
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Custom Integrasi API
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Prioritas Bantuan Teknis
                   </li>
                 </ul>
               </div>
 
               <button
-                onClick={() => openAuth('register', 'peternak')}
+                onClick={() => openPlanRegistration('enterprise')}
                 className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition cursor-pointer"
               >
-                Pilih Enterprise
+                Pilih Paket Bisnis
               </button>
             </div>
 
@@ -495,6 +501,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
         }}
         initialMode={authInitialMode}
         initialUserType={authInitialType}
+        initialPlan={authInitialPlan}
       />
 
     </div>

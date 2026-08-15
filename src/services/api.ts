@@ -96,6 +96,24 @@ export const ApiService = {
     return res.json();
   },
 
+  createSubscriptionCheckout: async (planId: 'basic' | 'pro' | 'enterprise') => {
+    const res = await fetch('/api/subscriptions/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planId })
+    });
+    const payload = await res.json().catch(() => ({ error: 'Respons pembayaran tidak valid.' }));
+    if (!res.ok) throw new Error(payload.error || 'Gagal membuat pembayaran.');
+    return payload as { success: true; orderId: string; redirectUrl: string; amount: number };
+  },
+
+  getSubscriptionStatus: async () => {
+    const res = await fetch('/api/subscriptions/status');
+    const payload = await res.json().catch(() => ({ error: 'Respons status langganan tidak valid.' }));
+    if (!res.ok) throw new Error(payload.error || 'Gagal memuat status langganan.');
+    return payload;
+  },
+
   // Fetch Farms from API
   getFarms: async () => {
     try {

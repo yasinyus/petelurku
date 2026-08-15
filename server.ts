@@ -23,6 +23,16 @@ const calculateAgeWeeks = (entryDate: string) => {
 };
 const SESSION_TTL_MS = 1000 * 60 * 60 * 8;
 const sessions = new Map<string, { user: { id: string; name: string; email: string; role: string }; expiresAt: number }>();
+const SUBSCRIPTION_PLANS = {
+  basic: { name: 'PetelurKu Basic', monthlyPrice: 49000, maxHouses: 2, maxUsers: 2 },
+  pro: { name: 'PetelurKu Pro', monthlyPrice: 99000, maxHouses: 10, maxUsers: 10 },
+  enterprise: { name: 'PetelurKu Bisnis', monthlyPrice: 199000, maxHouses: null, maxUsers: 30 }
+} as const;
+type SubscriptionPlanId = keyof typeof SUBSCRIPTION_PLANS;
+const isSubscriptionPlan = (value: unknown): value is SubscriptionPlanId => typeof value === 'string' && value in SUBSCRIPTION_PLANS;
+const midtransApiBase = () => process.env.MIDTRANS_IS_PRODUCTION === 'true' ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
+const midtransSnapBase = () => process.env.MIDTRANS_IS_PRODUCTION === 'true' ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com';
+const midtransAuthorization = () => `Basic ${Buffer.from(`${process.env.MIDTRANS_SERVER_KEY || ''}:`).toString('base64')}`;
 
 const hashPassword = (password: string) => crypto.scryptSync(password, 'chicksync-local-salt', 64).toString('hex');
 const hasSmtpConfig = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD && process.env.SMTP_FROM);
@@ -108,7 +118,7 @@ async function startServer() {
         city: 'Blitar',
         subscriptionPlan: 'pro',
         subscriptionStatus: 'active',
-        mrrAmount: 1500000,
+        mrrAmount: 99000,
         createdAt: new Date().toISOString()
       }
     ],
@@ -352,6 +362,49 @@ async function startServer() {
     }
   });
 
+  // Midtrans calls this endpoint without a user session. Verify every event
+  // directly against Midtrans before changing a subscription.
+  app.post('/api/payments/midtrans/notification', async (req: Request, res: Response) => {
+    const orderId = String(req.body?.order_id || '');
+    if (!orderId || !process.env.MIDTRANS_SERVER_KEY) return res.status(400).json({ error: 'Notifikasi pembayaran tidak valid.' });
+    try {
+      const verification = await fetch(`${midtransApiBase()}/v2/${encodeURIComponent(orderId)}/status`, {
+        headers: { Authorization: midtransAuthorization(), Accept: 'application/json' }
+      });
+      if (!verification.ok) return res.status(502).json({ error: 'Status transaksi tidak dapat diverifikasi.' });
+      const payment: any = await verification.json();
+      const connection = await getMySQLPool().getConnection();
+      try {
+        await connection.beginTransaction();
+        const [rows]: any = await connection.execute('SELECT id, farm_id, plan_type, amount, status FROM saas_subscriptions WHERE midtrans_order_id = ? FOR UPDATE', [orderId]);
+        if (!rows.length) { await connection.rollback(); return res.status(404).json({ error: 'Pesanan tidak ditemukan.' }); }
+        const subscription = rows[0];
+        if (Number(payment.gross_amount) !== Number(subscription.amount)) { await connection.rollback(); return res.status(400).json({ error: 'Nominal pembayaran tidak sesuai.' }); }
+        const paid = payment.transaction_status === 'settlement' || (payment.transaction_status === 'capture' && payment.fraud_status === 'accept');
+        if (paid && subscription.status !== 'active') {
+          const [expiryRows]: any = await connection.execute("SELECT GREATEST(NOW(), COALESCE(MAX(expires_at), NOW())) AS base_expiry FROM saas_subscriptions WHERE farm_id = ? AND status = 'active' AND id <> ?", [subscription.farm_id, subscription.id]);
+          await connection.execute(
+            "UPDATE saas_subscriptions SET status = 'active', payment_type = ?, paid_at = NOW(), expires_at = DATE_ADD(?, INTERVAL 1 MONTH) WHERE id = ?",
+            [payment.payment_type || null, expiryRows[0].base_expiry, subscription.id]
+          );
+          await connection.execute("UPDATE farms SET subscription_plan = ?, subscription_status = 'active', mrr_amount = ? WHERE id = ?", [subscription.plan_type, subscription.amount, subscription.farm_id]);
+        } else if (['deny', 'cancel', 'expire', 'failure'].includes(payment.transaction_status) && subscription.status !== 'active') {
+          await connection.execute("UPDATE saas_subscriptions SET status = 'failed', payment_type = ? WHERE id = ?", [payment.payment_type || null, subscription.id]);
+        }
+        await connection.commit();
+        return res.json({ received: true });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+    } catch (error: any) {
+      console.error('Midtrans notification error:', error.message);
+      return res.status(500).json({ error: 'Notifikasi pembayaran gagal diproses.' });
+    }
+  });
+
   app.get('/api/auth/session', (req: Request, res: Response) => {
     const session = getSession(req);
     if (!session) return res.status(401).json({ authenticated: false });
@@ -377,6 +430,95 @@ async function startServer() {
     const memberships: any[] = await queryMySQL('SELECT farm_id FROM farm_memberships WHERE user_id = ? LIMIT 1', [userId]);
     return memberships[0]?.farm_id as string | undefined;
   };
+
+  const getFarmPlan = async (farmId: string) => {
+    const rows: any[] = await queryMySQL('SELECT subscription_plan FROM farms WHERE id = ? LIMIT 1', [farmId]);
+    const id = isSubscriptionPlan(rows[0]?.subscription_plan) ? rows[0].subscription_plan : 'basic';
+    return { id, ...SUBSCRIPTION_PLANS[id] };
+  };
+
+  app.post('/api/subscriptions/checkout', async (req: Request, res: Response) => {
+    const session = getSession(req)!;
+    const planId = req.body.planId;
+    if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat melakukan pembayaran.' });
+    if (!isSubscriptionPlan(planId)) return res.status(400).json({ error: 'Paket tidak valid.' });
+    if (!process.env.MIDTRANS_SERVER_KEY) return res.status(503).json({ error: 'Midtrans belum dikonfigurasi oleh admin.' });
+    try {
+      const farmId = await getCurrentFarmId(session.user.id);
+      if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
+      const farmRows: any[] = await queryMySQL('SELECT name FROM farms WHERE id = ? LIMIT 1', [farmId]);
+      const plan = SUBSCRIPTION_PLANS[planId];
+      const subscriptionId = crypto.randomUUID();
+      const orderId = `PK-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+      await queryMySQL(
+        "INSERT INTO saas_subscriptions (id, farm_id, plan_type, amount, billing_cycle, status, midtrans_order_id, expires_at) VALUES (?, ?, ?, ?, 'monthly', 'pending', ?, DATE_ADD(NOW(), INTERVAL 1 MONTH))",
+        [subscriptionId, farmId, planId, plan.monthlyPrice, orderId]
+      );
+      const appUrl = (process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+      const response = await fetch(`${midtransSnapBase()}/snap/v1/transactions`, {
+        method: 'POST',
+        headers: { Authorization: midtransAuthorization(), Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transaction_details: { order_id: orderId, gross_amount: plan.monthlyPrice },
+          item_details: [{ id: planId, price: plan.monthlyPrice, quantity: 1, name: `${plan.name} - 1 bulan` }],
+          customer_details: { first_name: session.user.name, email: session.user.email },
+          callbacks: { finish: `${appUrl}/?payment=finish&order_id=${encodeURIComponent(orderId)}` },
+          custom_field1: farmId,
+          custom_field2: planId
+        })
+      });
+      const payload: any = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.redirect_url) {
+        await queryMySQL("UPDATE saas_subscriptions SET status = 'failed' WHERE id = ?", [subscriptionId]);
+        throw new Error(payload.error_messages?.join(', ') || 'Midtrans tidak dapat membuat halaman pembayaran.');
+      }
+      return res.status(201).json({ success: true, orderId, redirectUrl: payload.redirect_url, amount: plan.monthlyPrice });
+    } catch (error: any) {
+      console.error('Midtrans checkout error:', error.message);
+      return res.status(502).json({ error: error.message || 'Gagal membuat pembayaran.' });
+    }
+  });
+
+  app.get('/api/subscriptions/status', async (req: Request, res: Response) => {
+    try {
+      const farmId = await getCurrentFarmId(getSession(req)!.user.id);
+      if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
+      const rows: any[] = await queryMySQL(
+        `SELECT f.subscription_plan, f.subscription_status, f.trial_ends_at,
+          s.midtrans_order_id, s.status AS payment_status, s.payment_type, s.paid_at, s.expires_at
+         FROM farms f LEFT JOIN saas_subscriptions s ON s.id = (SELECT s2.id FROM saas_subscriptions s2 WHERE s2.farm_id = f.id ORDER BY s2.created_at DESC LIMIT 1)
+         WHERE f.id = ?`, [farmId]
+      );
+      return res.json({ source: 'mysql', data: rows[0] });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Keep checkout and status accessible for renewal, then protect all farm
+  // operations when a trial or paid subscription has ended.
+  app.use('/api', async (req: Request, res: Response, next) => {
+    try {
+      const farmId = await getCurrentFarmId(getSession(req)!.user.id);
+      if (!farmId) return next();
+      const rows: any[] = await queryMySQL(
+        `SELECT f.subscription_status, f.trial_ends_at,
+          (SELECT MAX(s.expires_at) FROM saas_subscriptions s WHERE s.farm_id = f.id AND s.status = 'active') AS paid_until
+         FROM farms f WHERE f.id = ?`, [farmId]
+      );
+      const farm = rows[0];
+      const trialExpired = farm?.subscription_status === 'trialing' && farm.trial_ends_at && new Date(farm.trial_ends_at).getTime() < Date.now();
+      const paidExpired = farm?.subscription_status === 'active' && farm.paid_until && new Date(farm.paid_until).getTime() < Date.now();
+      const unavailable = ['past_due', 'canceled'].includes(farm?.subscription_status) || trialExpired || paidExpired;
+      if (unavailable) {
+        if (farm?.subscription_status !== 'past_due') await queryMySQL("UPDATE farms SET subscription_status = 'past_due' WHERE id = ?", [farmId]);
+        return res.status(402).json({ error: 'Masa langganan telah berakhir. Silakan buka menu Langganan untuk memperpanjang paket.' });
+      }
+      return next();
+    } catch (error: any) {
+      return res.status(500).json({ error: `Gagal memeriksa langganan: ${error.message}` });
+    }
+  });
 
   // Read-only AI copilot. All farm data is selected server-side from the
   // authenticated tenant; the Gemini key never reaches web/mobile clients.
@@ -494,6 +636,10 @@ async function startServer() {
     try {
       const farmId = await getCurrentFarmId(session.user.id);
       if (!farmId) return res.status(403).json({ error: 'Hanya owner peternakan yang dapat mengundang anggota.' });
+      const plan = await getFarmPlan(farmId);
+      const memberCountRows: any[] = await queryMySQL('SELECT COUNT(*) AS total FROM farm_memberships WHERE farm_id = ?', [farmId]);
+      const totalUsers = Number(memberCountRows[0]?.total || 0) + 1;
+      if (totalUsers >= plan.maxUsers) return res.status(403).json({ error: `Paket ${plan.name} maksimal ${plan.maxUsers} pengguna termasuk owner. Tingkatkan paket untuk menambah anggota.` });
       const normalizedEmail = String(email).trim().toLowerCase();
       const exists: any[] = await queryMySQL('SELECT id FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
       if (exists.length) return res.status(409).json({ error: 'Email pengguna sudah terdaftar.' });
@@ -631,7 +777,7 @@ async function startServer() {
       city: req.body.city || 'Blitar',
       subscriptionPlan: req.body.subscriptionPlan || 'pro',
       subscriptionStatus: 'active',
-      mrrAmount: req.body.subscriptionPlan === 'enterprise' ? 2500000 : 1500000,
+      mrrAmount: isSubscriptionPlan(req.body.subscriptionPlan) ? SUBSCRIPTION_PLANS[req.body.subscriptionPlan].monthlyPrice : SUBSCRIPTION_PLANS.pro.monthlyPrice,
       createdAt: new Date().toISOString()
     };
 
@@ -691,6 +837,13 @@ async function startServer() {
     const ageWeeks = calculateAgeWeeks(newHouse.housedDate);
 
     try {
+      const plan = await getFarmPlan(farmId);
+      if (plan.maxHouses !== null) {
+        const houseCountRows: any[] = await queryMySQL('SELECT COUNT(*) AS total FROM houses WHERE farm_id = ?', [farmId]);
+        if (Number(houseCountRows[0]?.total || 0) >= plan.maxHouses) {
+          return res.status(403).json({ error: `Paket ${plan.name} maksimal ${plan.maxHouses} kandang. Tingkatkan paket untuk menambah kandang.` });
+        }
+      }
       await queryMySQL(
         `INSERT INTO houses (id, farm_id, code, name, chicken_type, initial_chickens, current_chickens, housed_date, age_weeks, housing_type, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

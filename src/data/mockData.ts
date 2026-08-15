@@ -364,7 +364,7 @@ export const INITIAL_TRANSACTIONS: FinancialTransaction[] = [
     type: 'income',
     category: 'manure_sales',
     description: 'Penjualan Pupuk Kotoran Ayam Kering (50 Karung)',
-    amount: 750000,
+    amount: 49000,
     quantity: 50,
     unit: 'karung',
     recordedBy: 'Budi Santoso',

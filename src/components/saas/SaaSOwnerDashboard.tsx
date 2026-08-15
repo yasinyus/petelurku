@@ -40,7 +40,7 @@ const INITIAL_TENANTS: SaaSTenantOrg[] = [
     city: 'Blitar, Jawa Timur',
     plan: 'pro',
     status: 'active',
-    monthlyRevenue: 1500000,
+    monthlyRevenue: 99000,
     totalCoops: 3,
     totalChickens: 5425,
     joinedDate: '2025-10-12',
@@ -57,7 +57,7 @@ const INITIAL_TENANTS: SaaSTenantOrg[] = [
     city: 'Malang, Jawa Timur',
     plan: 'enterprise',
     status: 'active',
-    monthlyRevenue: 2500000,
+    monthlyRevenue: 199000,
     totalCoops: 12,
     totalChickens: 35000,
     joinedDate: '2025-08-01',
@@ -74,7 +74,7 @@ const INITIAL_TENANTS: SaaSTenantOrg[] = [
     city: 'Payakumbuh, Sumatera Barat',
     plan: 'basic',
     status: 'active',
-    monthlyRevenue: 750000,
+    monthlyRevenue: 49000,
     totalCoops: 2,
     totalChickens: 2800,
     joinedDate: '2026-01-15',
@@ -108,7 +108,7 @@ const INITIAL_TENANTS: SaaSTenantOrg[] = [
     city: 'Kendhal, Jawa Tengah',
     plan: 'basic',
     status: 'expired',
-    monthlyRevenue: 750000,
+    monthlyRevenue: 49000,
     totalCoops: 1,
     totalChickens: 1500,
     joinedDate: '2025-11-20',
@@ -125,7 +125,7 @@ const INITIAL_TENANTS: SaaSTenantOrg[] = [
     city: 'Lampung Selatan',
     plan: 'enterprise',
     status: 'active',
-    monthlyRevenue: 2500000,
+    monthlyRevenue: 199000,
     totalCoops: 15,
     totalChickens: 42000,
     joinedDate: '2025-06-10',
@@ -140,7 +140,7 @@ const INITIAL_TRANSACTIONS: SaaSPaymentTransaction[] = [
     id: 'pay-1001',
     orgId: 'org-1',
     orgName: 'Peternakan Barokah Layer Farm',
-    amount: 1500000,
+    amount: 99000,
     plan: 'pro',
     paymentMethod: 'QRIS Instant (Gopay)',
     gateway: 'Midtrans',
@@ -152,7 +152,7 @@ const INITIAL_TRANSACTIONS: SaaSPaymentTransaction[] = [
     id: 'pay-1002',
     orgId: 'org-2',
     orgName: 'PT Avian Jaya Nusantara',
-    amount: 2500000,
+    amount: 199000,
     plan: 'enterprise',
     paymentMethod: 'BCA Virtual Account',
     gateway: 'Midtrans',
@@ -164,7 +164,7 @@ const INITIAL_TRANSACTIONS: SaaSPaymentTransaction[] = [
     id: 'pay-1003',
     orgId: 'org-3',
     orgName: 'Sumber Makmur Poultry',
-    amount: 750000,
+    amount: 49000,
     plan: 'basic',
     paymentMethod: 'Mandiri Virtual Account',
     gateway: 'Xendit',
@@ -176,7 +176,7 @@ const INITIAL_TRANSACTIONS: SaaSPaymentTransaction[] = [
     id: 'pay-1004',
     orgId: 'org-5',
     orgName: 'CV Sinar Farm Poultry',
-    amount: 750000,
+    amount: 49000,
     plan: 'basic',
     paymentMethod: 'BCA Virtual Account',
     gateway: 'Midtrans',
@@ -188,7 +188,7 @@ const INITIAL_TRANSACTIONS: SaaSPaymentTransaction[] = [
     id: 'pay-1005',
     orgId: 'org-4',
     orgName: 'Lumbung Telur Sejahtera',
-    amount: 1500000,
+    amount: 99000,
     plan: 'pro',
     paymentMethod: 'QRIS Instant',
     gateway: 'Midtrans',
@@ -273,7 +273,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
     e.preventDefault();
     if (!newOrgName || !newOwnerName || !newEmail) return;
 
-    const planPrices = { basic: 750000, pro: 1500000, enterprise: 2500000 };
+    const planPrices = { basic: 49000, pro: 99000, enterprise: 199000 };
     const newTenant: SaaSTenantOrg = {
       id: `org-${Date.now()}`,
       name: newOrgName,
@@ -308,7 +308,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
         return { 
           ...t, 
           status: nextStatus,
-          monthlyRevenue: nextStatus === 'active' ? (t.plan === 'enterprise' ? 2500000 : t.plan === 'pro' ? 1500000 : 750000) : 0 
+          monthlyRevenue: nextStatus === 'active' ? (t.plan === 'enterprise' ? 199000 : t.plan === 'pro' ? 99000 : 49000) : 0 
         };
       }
       return t;
@@ -531,7 +531,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
             {/* Enterprise Bar */}
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between font-bold">
-                <span className="text-purple-700">Enterprise (Rp 2.500.000/bln)</span>
+                <span className="text-purple-700">Bisnis (Rp 199.000/bln)</span>
                 <span className="text-slate-900">{enterpriseCount} Peternakan</span>
               </div>
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -545,7 +545,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
             {/* Pro Bar */}
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between font-bold">
-                <span className="text-amber-700">Pro (Rp 1.500.000/bln)</span>
+                <span className="text-amber-700">Pro (Rp 99.000/bln)</span>
                 <span className="text-slate-900">{proCount} Peternakan</span>
               </div>
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -559,7 +559,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
             {/* Basic Bar */}
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between font-bold">
-                <span className="text-teal-700">Basic (Rp 750.000/bln)</span>
+                <span className="text-teal-700">Basic (Rp 49.000/bln)</span>
                 <span className="text-slate-900">{basicCount} Peternakan</span>
               </div>
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -968,9 +968,9 @@ export const SaaSOwnerDashboard: React.FC = () => {
                     onChange={(e) => setNewPlan(e.target.value as SubscriptionPlan)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-600 font-bold"
                   >
-                    <option value="basic">Basic (Rp 750k/bln)</option>
-                    <option value="pro">Pro (Rp 1.5M/bln)</option>
-                    <option value="enterprise">Enterprise (Rp 2.5M/bln)</option>
+                    <option value="basic">Basic (Rp 49rb/bln)</option>
+                    <option value="pro">Pro (Rp 99rb/bln)</option>
+                    <option value="enterprise">Bisnis (Rp 199rb/bln)</option>
                   </select>
                 </div>
               </div>

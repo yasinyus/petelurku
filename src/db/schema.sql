@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS `farms` (
   `subscription_plan` ENUM('basic', 'pro', 'enterprise') NOT NULL DEFAULT 'pro',
   `subscription_status` ENUM('active', 'trialing', 'past_due', 'canceled') NOT NULL DEFAULT 'active',
   `trial_ends_at` DATETIME NULL,
-  `mrr_amount` DECIMAL(12, 2) NOT NULL DEFAULT 1500000.00,
+  `mrr_amount` DECIMAL(12, 2) NOT NULL DEFAULT 99000.00,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT `fk_farms_owner` FOREIGN KEY (`owner_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
@@ -236,7 +236,7 @@ INSERT IGNORE INTO `users` (`id`, `email`, `password_hash`, `full_name`, `role`,
 ('usr-farm-1', 'yasin@barokahfarm.id', 'hash_secret_456', 'H. Yasin Yusuf', 'farm_owner', 'active');
 
 INSERT IGNORE INTO `farms` (`id`, `owner_user_id`, `name`, `owner_name`, `city`, `subscription_plan`, `subscription_status`, `mrr_amount`) VALUES
-('farm-barokah-01', 'usr-farm-1', 'Peternakan Barokah Layer Farm', 'H. Yasin Yusuf', 'Blitar', 'pro', 'active', 1500000.00);
+('farm-barokah-01', 'usr-farm-1', 'Peternakan Barokah Layer Farm', 'H. Yasin Yusuf', 'Blitar', 'pro', 'active', 99000.00);
 
 INSERT IGNORE INTO `houses` (`id`, `farm_id`, `code`, `name`, `chicken_type`, `initial_chickens`, `current_chickens`, `housed_date`, `age_weeks`) VALUES
 ('house-A1', 'farm-barokah-01', 'KD-A1', 'Kandang A1 (Utama)', 'Isa Brown Layer', 5000, 4920, '2025-06-15', 34),

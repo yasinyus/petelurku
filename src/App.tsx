@@ -154,6 +154,7 @@ export default function App() {
       setAuthenticatedUserId(user.id);
       setIsGuestDemo(false);
       setViewMode('app');
+      if (new URLSearchParams(window.location.search).get('payment') === 'finish') setActiveTab('billing');
     }).catch(() => undefined).finally(() => setIsSessionChecking(false));
   }, []);
 

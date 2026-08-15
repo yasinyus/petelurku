@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { CreditCard, Zap, CheckCircle2, ShieldCheck, QrCode, ArrowRight, Download, Building2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { CreditCard, Zap, CheckCircle2, ShieldCheck, ArrowRight, Download } from 'lucide-react';
 import { Organization, SubscriptionPlan } from '../../types';
+import { ApiService } from '../../services/api';
 
 interface SubscriptionBillingProps {
   org: Organization;
@@ -13,64 +14,92 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
 }) => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('pro');
-  const [paymentMethod, setPaymentMethod] = useState<'qris' | 'bca_va' | 'mandiri_va'>('qris');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
   const isTrial = org.subscriptionStatus === 'trialing' || org.status === 'trial';
   const formatDate = (value?: string | null) => value ? new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-';
   const statusLabel = isTrial ? 'Trial' : org.subscriptionStatus === 'active' || org.status === 'active' ? 'Aktif' : org.subscriptionStatus || 'Tidak aktif';
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('payment') !== 'finish') return;
+    let attempts = 0;
+    const checkStatus = async () => {
+      attempts += 1;
+      try {
+        const result = await ApiService.getSubscriptionStatus();
+        if (result.data?.payment_status === 'active') {
+          onUpdatePlan(result.data.subscription_plan);
+          setPaymentSuccess(true);
+          window.history.replaceState({}, '', window.location.pathname);
+          return;
+        }
+        if (attempts < 6) window.setTimeout(checkStatus, 3000);
+        else setPaymentError('Pembayaran masih menunggu konfirmasi. Status akan diperbarui otomatis setelah Midtrans mengirim notifikasi.');
+      } catch (error: any) {
+        setPaymentError(error.message || 'Status pembayaran belum dapat diperiksa.');
+      }
+    };
+    checkStatus();
+  }, []);
 
   const plans: { id: SubscriptionPlan; name: string; price: string; rawPrice: number; features: string[]; isPopular?: boolean }[] = [
     {
       id: 'basic',
       name: 'Plan Basic',
-      price: 'Rp 149.000',
-      rawPrice: 149000,
+      price: 'Rp 49.000',
+      rawPrice: 49000,
       features: [
-        'Maksimal 2 Kandang Active',
-        '2 Akses Pengguna Staf',
-        'Pencatatan Telur & Pakan',
-        'Mode Offline & Cloud Sync',
-        'Enkripsi E2EE AES-256'
+        'Maksimal 2 kandang',
+        '2 pengguna termasuk owner',
+        'Dashboard hari ini & kemarin',
+        'Produksi telur dan HDP',
+        'Stok serta biaya pakan',
+        'Kesehatan dan vaksinasi',
+        'Keuangan dan untung rugi'
       ]
     },
     {
       id: 'pro',
       name: 'Plan Pro Layer',
-      price: 'Rp 399.000',
-      rawPrice: 399000,
+      price: 'Rp 99.000',
+      rawPrice: 99000,
       isPopular: true,
       features: [
-        'Maksimal 10 Kandang Active',
-        '10 Akses Pengguna Staf',
-        'Pengingat Vaksinasi Otomatis',
-        'Kalkulator FCR & Stok Pakan',
-        'Keuangan & Profit Real-Time',
-        'Ekspor Laporan PDF Resmi'
+        'Semua fitur Basic',
+        'Maksimal 10 kandang',
+        '10 pengguna termasuk owner',
+        'Kelola akses dan petugas kandang',
+        'Laporan produksi dan keuangan PDF',
+        'Dashboard pendapatan dan biaya pakan'
       ]
     },
     {
       id: 'enterprise',
-      name: 'Plan Enterprise',
-      price: 'Rp 999.000',
-      rawPrice: 999000,
+      name: 'Plan Bisnis',
+      price: 'Rp 199.000',
+      rawPrice: 199000,
       features: [
-        'Kandang Tanpa Batas (Unlimited)',
-        'Pengguna Staf Tanpa Batas',
-        'Integrasi API Pihak Ketiga',
-        'Dukungan Dokter Hewan Prioritas',
-        'Backup Cloud Real-Time Multi-Region'
+        'Semua fitur Pro',
+        'Jumlah kandang tanpa batas',
+        'Maksimal 30 pengguna',
+        'Laporan produksi dan keuangan PDF',
+        'Kelola akses petugas per kandang',
+        'Prioritas bantuan teknis'
       ]
     }
   ];
 
-  const handlePayNow = () => {
+  const handlePayNow = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
+    setPaymentError('');
+    try {
+      const checkout = await ApiService.createSubscriptionCheckout(selectedPlan);
+      window.location.assign(checkout.redirectUrl);
+    } catch (error: any) {
       setIsProcessing(false);
-      setPaymentSuccess(true);
-      onUpdatePlan(selectedPlan);
-    }, 1800);
+      setPaymentError(error.message || 'Pembayaran belum dapat dibuat.');
+    }
   };
 
   return (
@@ -98,7 +127,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map((p) => {
-          const isCurrent = org.plan === p.id;
+          const isCurrent = org.plan === p.id && !isTrial;
 
           return (
             <div
@@ -164,9 +193,9 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
           <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-xl text-slate-900">
             {!paymentSuccess ? (
               <>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">Simulasi Integrasi Pembayaran Otomatis</h3>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">Lanjutkan Pembayaran</h3>
                 <p className="text-xs text-slate-500 mb-4">
-                  Midtrans / Xendit Payment Gateway Simulator (Callback Real-Time)
+                  Anda akan diarahkan ke halaman pembayaran aman Midtrans.
                 </p>
 
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4 text-xs">
@@ -182,33 +211,11 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
                   </div>
                 </div>
 
-                <div className="space-y-3 mb-6 text-xs">
-                  <label className="block text-slate-700 font-semibold">Pilih Metode Pembayaran Otomatis:</label>
-                  
-                  <div 
-                    onClick={() => setPaymentMethod('qris')}
-                    className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between transition ${
-                      paymentMethod === 'qris' ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <QrCode className="w-4 h-4 text-emerald-600" />
-                      <span className="font-bold">QRIS Instant (Gopay, OVO, Dana, ShopeePay)</span>
-                    </div>
-                  </div>
-
-                  <div 
-                    onClick={() => setPaymentMethod('bca_va')}
-                    className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between transition ${
-                      paymentMethod === 'bca_va' ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-blue-600" />
-                      <span className="font-bold">BCA Virtual Account (Auto-Detect)</span>
-                    </div>
-                  </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-6 text-xs text-blue-900 leading-relaxed">
+                  Metode yang tersedia—seperti QRIS, transfer virtual account, dan e-wallet—mengikuti aktivasi pada akun merchant Midtrans Anda. Paket baru aktif otomatis setelah pembayaran terverifikasi.
                 </div>
+
+                {paymentError && <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{paymentError}</div>}
 
                 <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
                   <button
@@ -226,7 +233,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
                       <span>Memproses Pembayaran...</span>
                     ) : (
                       <>
-                        <span>Bayar & Aktifkan Paket</span>
+                        <span>Bayar melalui Midtrans</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}

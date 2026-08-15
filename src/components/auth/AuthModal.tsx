@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Building2, 
   ShieldCheck, 
@@ -27,6 +27,7 @@ interface AuthModalProps {
   onLoginSuccess: (userType: 'peternak' | 'saas_owner', userData?: any) => void;
   initialMode?: 'login' | 'register';
   initialUserType?: 'peternak' | 'saas_owner';
+  initialPlan?: SubscriptionPlan;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -34,7 +35,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onLoginSuccess,
   initialMode = 'login',
-  initialUserType = 'peternak'
+  initialUserType = 'peternak',
+  initialPlan = 'pro'
 }) => {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [userType, setUserType] = useState<'peternak' | 'saas_owner'>(initialUserType);
@@ -46,10 +48,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [farmName, setFarmName] = useState('');
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('pro');
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>(initialPlan);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setMode(initialMode);
+    setUserType(initialUserType);
+    setSelectedPlan(initialPlan);
+  }, [isOpen, initialMode, initialUserType, initialPlan]);
 
   if (!isOpen) return null;
 
