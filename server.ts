@@ -26,21 +26,33 @@ const sessions = new Map<string, { user: { id: string; name: string; email: stri
 
 const hashPassword = (password: string) => crypto.scryptSync(password, 'chicksync-local-salt', 64).toString('hex');
 const hasSmtpConfig = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD && process.env.SMTP_FROM);
+const escapeHtml = (value: string) => value
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#039;');
+const createSmtpTransporter = () => nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+  connectionTimeout: 15_000,
+  greetingTimeout: 15_000,
+  socketTimeout: 30_000,
+  requireTLS: process.env.SMTP_REQUIRE_TLS !== 'false' && process.env.SMTP_SECURE !== 'true'
+});
 const sendVerificationEmail = async (email: string, name: string, verificationUrl: string) => {
   if (!hasSmtpConfig()) return false;
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD }
-  });
-  await transporter.sendMail({
+  const safeName = escapeHtml(name);
+  const info = await createSmtpTransporter().sendMail({
     from: process.env.SMTP_FROM,
     to: email,
-    subject: 'Konfirmasi pendaftaran ChickSync',
-    text: `Halo ${name}, konfirmasikan email Anda untuk mengaktifkan trial ChickSync 15 hari: ${verificationUrl}`,
-    html: `<p>Halo ${name},</p><p>Konfirmasikan email Anda untuk mengaktifkan trial ChickSync selama 15 hari.</p><p><a href="${verificationUrl}">Konfirmasi pendaftaran</a></p><p>Tautan ini berlaku selama 24 jam.</p>`
+    subject: 'Aktifkan akun PetelurKu.com Anda',
+    text: `Halo ${name},\n\nAktifkan akun PetelurKu.com Anda melalui tautan berikut:\n${verificationUrl}\n\nTautan berlaku selama 24 jam. Abaikan email ini jika Anda tidak melakukan pendaftaran.`,
+    html: `<!doctype html><html><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a"><div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;padding:32px"><h1 style="font-size:24px;color:#15803d;margin-top:0">PetelurKu.com</h1><p>Halo ${safeName},</p><p>Terima kasih telah mendaftar. Klik tombol berikut untuk mengaktifkan akun dan memulai masa uji coba 15 hari.</p><p style="margin:28px 0"><a href="${verificationUrl}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:13px 22px;border-radius:9px;font-weight:bold">Aktifkan akun saya</a></p><p style="font-size:13px;color:#64748b">Tautan berlaku selama 24 jam. Jika Anda tidak mendaftar di PetelurKu.com, abaikan email ini.</p></div></body></html>`
   });
+  console.info(`Email verifikasi diterima SMTP untuk ${email}: ${info.messageId}`);
   return true;
 };
 
@@ -278,11 +290,16 @@ async function startServer() {
 
       const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
       const verificationUrl = `${appUrl.replace(/\/$/, '')}/api/auth/verify-email?token=${rawToken}`;
-      const emailDelivered = await sendVerificationEmail(email.trim().toLowerCase(), fullName, verificationUrl);
+      let emailDelivered = false;
+      try {
+        emailDelivered = await sendVerificationEmail(email.trim().toLowerCase(), fullName, verificationUrl);
+      } catch (smtpError: any) {
+        console.error(`SMTP gagal mengirim verifikasi ke ${email}:`, smtpError?.message || smtpError);
+      }
       return res.status(201).json({
         success: true,
         emailDelivered,
-        message: emailDelivered ? 'Pendaftaran berhasil. Buka email Anda untuk mengonfirmasi akun.' : 'Pendaftaran tersimpan, tetapi SMTP belum dikonfigurasi. Isi SMTP_* di .env lalu lakukan kirim ulang verifikasi.',
+        message: emailDelivered ? 'Pendaftaran berhasil. Buka email Anda untuk mengaktifkan akun.' : 'Pendaftaran berhasil disimpan, tetapi email aktivasi belum terkirim. Periksa konfigurasi SMTP lalu gunakan Kirim Ulang Verifikasi.',
         trialEndsAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
       });
     } catch (error: any) {
@@ -302,7 +319,8 @@ async function startServer() {
       if (!rows.length) return res.status(400).send('Tautan verifikasi tidak valid atau sudah kedaluwarsa.');
       await queryMySQL("UPDATE users SET status = 'active' WHERE id = ?", [rows[0].user_id]);
       await queryMySQL('UPDATE email_verifications SET verified_at = NOW() WHERE id = ?', [rows[0].id]);
-      return res.type('html').send('<!doctype html><html><body style="font-family:Arial;padding:2rem"><h1>Email berhasil dikonfirmasi</h1><p>Trial ChickSync Anda aktif selama 15 hari. Anda dapat kembali ke aplikasi untuk masuk.</p></body></html>');
+      const loginUrl = (process.env.APP_URL || '/').replace(/\/$/, '');
+      return res.type('html').send(`<!doctype html><html><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a"><main style="max-width:560px;margin:64px auto;background:#fff;border-radius:16px;padding:36px;text-align:center"><h1 style="color:#15803d">Akun berhasil diaktifkan</h1><p>Masa uji coba PetelurKu.com Anda aktif selama 15 hari.</p><a href="${loginUrl}" style="display:inline-block;margin-top:16px;background:#16a34a;color:#fff;text-decoration:none;padding:13px 22px;border-radius:9px;font-weight:bold">Masuk ke PetelurKu.com</a></main></body></html>`);
     } catch (error: any) {
       return res.status(500).send('Gagal mengonfirmasi email.');
     }
@@ -322,8 +340,13 @@ async function startServer() {
       await queryMySQL('INSERT INTO email_verifications (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))', [users[0].id, tokenHash]);
       const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
       const verificationUrl = `${appUrl.replace(/\/$/, '')}/api/auth/verify-email?token=${rawToken}`;
-      const emailDelivered = await sendVerificationEmail(email, users[0].full_name, verificationUrl);
-      return res.json({ success: emailDelivered, message: emailDelivered ? 'Email konfirmasi telah dikirim ulang.' : 'SMTP belum dikonfigurasi. Isi SMTP_* di .env terlebih dahulu.' });
+      let emailDelivered = false;
+      try {
+        emailDelivered = await sendVerificationEmail(email, users[0].full_name, verificationUrl);
+      } catch (smtpError: any) {
+        console.error(`SMTP gagal mengirim ulang verifikasi ke ${email}:`, smtpError?.message || smtpError);
+      }
+      return res.status(emailDelivered ? 200 : 503).json({ success: emailDelivered, message: emailDelivered ? 'Email aktivasi telah dikirim ulang.' : 'Email belum dapat dikirim. Silakan coba lagi beberapa saat atau hubungi admin.' });
     } catch (error: any) {
       return res.status(500).json({ success: false, message: error.message });
     }
