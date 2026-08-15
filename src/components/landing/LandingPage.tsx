@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  Building2, 
-  ShieldCheck, 
   CheckCircle2, 
   ArrowRight, 
   Zap, 
@@ -9,17 +7,9 @@ import {
   Syringe, 
   FileSpreadsheet, 
   Users, 
-  CreditCard, 
-  Lock, 
-  Wifi, 
-  WifiOff, 
-  Smartphone, 
-  Award, 
   Sparkles, 
   ChevronRight, 
   DollarSign, 
-  Star, 
-  HelpCircle,
   Crown,
   Egg
 } from 'lucide-react';
@@ -62,13 +52,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600">
-            <a href="#features" className="hover:text-emerald-700 transition">Fitur Utama</a>
-            <a href="#pricing" className="hover:text-emerald-700 transition">Paket</a>
-            <a href="#security" className="hover:text-emerald-700 transition">Keamanan E2EE</a>
-            <a href="#saas-owner" className="hover:text-emerald-700 transition flex items-center gap-1">
-              <Crown className="w-3.5 h-3.5 text-amber-600" />
-              Untuk Admin
-            </a>
+            <a href="#features" className="hover:text-emerald-700 transition">Fitur</a>
+            <a href="#benefits" className="hover:text-emerald-700 transition">Manfaat</a>
+            <a href="#pricing" className="hover:text-emerald-700 transition">Harga</a>
           </nav>
 
           {/* CTA Buttons */}
@@ -93,7 +79,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer shadow-xs flex items-center gap-1.5"
             >
               <Zap className="w-3.5 h-3.5" />
-              Daftar Gratis 14 Hari
+              Coba Gratis 15 Hari
             </button>
           </div>
 
@@ -108,24 +94,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             
             <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-full text-emerald-800 text-xs font-bold shadow-2xs">
               <Sparkles className="w-4 h-4 text-emerald-600" />
-              Platform Manajemen Peternakan Ayam Petelur
+              Dibuat untuk Peternak Ayam Petelur Indonesia
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-              Kelola Ribuan Ayam Petelur Secara <span className="text-emerald-600 underline decoration-emerald-300 decoration-wavy">Presisi</span>
+              Produksi Telur, Pakan, dan Keuntungan Peternakan <span className="text-emerald-600">Terpantau Setiap Hari</span>
             </h1>
 
             <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
-              Otomatiskan pencatatan Hen Day Production (HDP %), analisis HPP pakan per butir telur, jadwal vaksinasi, hingga laporan keuangan peternakan.
+              Ganti catatan buku dan spreadsheet yang tercecer dengan satu aplikasi. PetelurKu membantu Anda mencatat produksi telur, memantau biaya pakan, mengelola populasi kandang, dan mengetahui untung rugi dengan lebih cepat.
             </p>
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
               <button
-                onClick={() => onOpenApp('peternak')}
+                onClick={() => openAuth('register', 'peternak')}
                 className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition cursor-pointer shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
               >
-                Coba Aplikasi Peternak Sekarang <ArrowRight className="w-4 h-4" />
+                Mulai Gratis 15 Hari <ArrowRight className="w-4 h-4" />
               </button>
 
               <button
@@ -133,20 +119,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                 className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
               >
                 <Crown className="w-4 h-4 text-amber-600" />
-                Demo Dashboard Admin
+                Lihat Demo Aplikasi
               </button>
             </div>
 
             {/* Feature Pills */}
             <div className="pt-6 flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-slate-600">
               <span className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-2xs">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> 100% Offline-First E2EE
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Mudah Dipakai di HP dan Komputer
               </span>
               <span className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-2xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Kalkulasi HDP & HPP Otomatis
               </span>
               <span className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-2xs">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Multi-Role (Owner, Manager, Vet, Anak Kandang)
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Akses Owner dan Petugas Kandang
               </span>
             </div>
 
@@ -197,10 +183,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
           
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Fitur Lengkap untuk Peternak
+              Semua Catatan Peternakan dalam Satu Tempat
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
-              Setiap modul dirancang khusus menjawab kebutuhan peternakan ayam bertelur modern di Indonesia.
+              Data harian lebih rapi, keputusan lebih cepat, dan kondisi setiap kandang lebih mudah dipantau.
             </p>
           </div>
 
@@ -211,9 +197,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
                 🥚
               </div>
-              <h3 className="text-base font-bold text-slate-900">Pancatatan Panen & Hen Day (HDP %)</h3>
+              <h3 className="text-base font-bold text-slate-900">Pencatatan Produksi Telur dan HDP</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Catat jumlah telur utuh, retak, dan bobot total (kg) berdasarkan slot waktu pagi, siang, dan sore. Grafik kurva produksi siap dipantau harian.
+                Catat telur utuh, retak, bobot panen, dan kematian ayam per kandang. Persentase Hen Day Production dihitung otomatis setiap hari.
               </p>
             </div>
 
@@ -222,9 +208,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
                 <BarChart3 className="w-5 h-5 text-amber-700" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Manajemen Stok Pakan & HPP</h3>
+              <h3 className="text-base font-bold text-slate-900">Stok dan Biaya Pakan Harian</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Hitung FCR (Feed Conversion Ratio) dan HPP per butir telur secara otomatis berdasarkan konsumsi pakan konsentrat, jagung, dan bekatul.
+                Pantau stok jagung, konsentrat, dan bekatul. Biaya pakan dihitung dari konsumsi ayam, komposisi bahan, dan harga per kilogram.
               </p>
             </div>
 
@@ -233,9 +219,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
                 <Syringe className="w-5 h-5 text-blue-700" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Kesehatan & Rekam Medis Dokter</h3>
+              <h3 className="text-base font-bold text-slate-900">Kesehatan dan Jadwal Vaksinasi</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Pengingat otomatis jadwal vaksinasi ND-IB, AI, Coryza, serta pencatatan tingkat kematian (deplesi) dan konsultasi dokter hewan.
+                Simpan jadwal vaksin, catatan gejala, pengobatan, dan angka kematian agar riwayat kesehatan ayam tidak hilang.
               </p>
             </div>
 
@@ -244,9 +230,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold">
                 <DollarSign className="w-5 h-5 text-teal-700" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Keuangan & Laporan Arus Kas</h3>
+              <h3 className="text-base font-bold text-slate-900">Pendapatan dan Untung Rugi</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Pantau pendapatan penjualan telur utuh & afkir vs biaya operasional pakan, obat, dan listrik. Hitung Net Profit Margin secara instan.
+                Bandingkan pendapatan telur dengan biaya pakan harian langsung dari dashboard untuk melihat kondisi usaha hari ini dan kemarin.
               </p>
             </div>
 
@@ -255,9 +241,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
                 <FileSpreadsheet className="w-5 h-5 text-purple-700" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Ekspor Laporan PDF Profesional</h3>
+              <h3 className="text-base font-bold text-slate-900">Laporan Siap Dibagikan</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Unduh laporan cetak resmi format A4 lengkap dengan ringkasan statistik, rincian biaya, dan kolom tanda tangan pimpinan peternakan.
+                Unduh laporan produksi dan keuangan dalam format PDF untuk evaluasi usaha, arsip, atau dibagikan kepada rekan bisnis.
               </p>
             </div>
 
@@ -266,9 +252,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
                 <Crown className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Portal Admin Platform</h3>
+              <h3 className="text-base font-bold text-slate-900">Kelola Tim dan Hak Akses</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Khusus pemilik platform: pantau total pendapatan berulang (MRR/ARR), kelola tenant peternakan, simulasi webhook Midtrans/Xendit, & siarkan pengumuman.
+                Owner dapat mengatur akses manager, petugas kandang, dan dokter hewan sesuai pekerjaan masing-masing.
               </p>
             </div>
 
@@ -286,7 +272,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               Pilihan Paket Langganan
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
-              Pilih paket yang paling sesuai dengan skala peternakan Anda. Uji coba gratis 14 hari.
+              Pilih paket sesuai jumlah kandang dan anggota tim. Semua paket dapat dicoba gratis selama 15 hari.
             </p>
           </div>
 
@@ -403,66 +389,78 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-16 bg-white border-t border-slate-200">
+      {/* Benefits Section */}
+      <section id="benefits" className="py-16 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           
           <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-2xl font-black text-slate-900">Dipercaya Oleh Peternak Layer di Seluruh Indonesia</h2>
+            <h2 className="text-2xl font-black text-slate-900">Lebih Mudah Mengendalikan Usaha Peternakan</h2>
+            <p className="text-sm text-slate-500 mt-2">Ubah catatan harian menjadi informasi yang siap digunakan untuk mengambil keputusan.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-3">
-              <div className="flex text-amber-400 gap-1">
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-              </div>
+              <BarChart3 className="w-7 h-7 text-emerald-600" />
               <p className="text-xs text-slate-700 italic leading-relaxed">
-                "Aplikasi ini sangat membantu mengontrol panen dari 3 kandang kami di Blitar. Grafik HDP % membantu kami langsung mendeteksi bila ada penurunan produksi secara cepat."
+                Bandingkan produksi hari ini dan kemarin agar penurunan hasil telur dapat diketahui lebih cepat.
               </p>
               <div className="text-xs font-bold text-slate-900 pt-2 border-t border-slate-200">
-                H. Yasin Yusuf <span className="text-slate-500 font-normal">— Peternakan Barokah Farm, Blitar</span>
+                Pantau Produksi Harian
               </div>
             </div>
 
             <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-3">
-              <div className="flex text-amber-400 gap-1">
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-              </div>
+              <DollarSign className="w-7 h-7 text-emerald-600" />
               <p className="text-xs text-slate-700 italic leading-relaxed">
-                "Perhitungan HPP pakan per butir telur sangat akurat! Kami jadi tahu kapan momen terbaik membeli bahan pakan konsentrat saat harga jagung naik."
+                Hitung biaya dari harga jagung, konsentrat, bekatul, komposisi bahan, dan konsumsi ayam produktif.
               </p>
               <div className="text-xs font-bold text-slate-900 pt-2 border-t border-slate-200">
-                Ir. Hendra Gunawan <span className="text-slate-500 font-normal">— PT Avian Jaya, Malang</span>
+                Kendalikan Biaya Pakan
               </div>
             </div>
 
             <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-3">
-              <div className="flex text-amber-400 gap-1">
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400" />
-              </div>
+              <Users className="w-7 h-7 text-emerald-600" />
               <p className="text-xs text-slate-700 italic leading-relaxed">
-                "Kemudahan ekspor laporan PDF A4 membuat pelaporan bulanan ke investor jadi jauh lebih rapi, terpercaya, dan profesional."
+                Petugas mencatat dari kandang, sementara owner dapat memantau laporan terbaru dari perangkatnya.
               </p>
               <div className="text-xs font-bold text-slate-900 pt-2 border-t border-slate-200">
-                Dr. Agus Setiawan <span className="text-slate-500 font-normal">— Bina Tani Layer, Lampung</span>
+                Kelola Tim dari Mana Saja
               </div>
             </div>
 
           </div>
 
+        </div>
+      </section>
+
+      <section className="py-16 bg-slate-50 border-t border-slate-200" aria-labelledby="faq-title">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-9">
+            <h2 id="faq-title" className="text-2xl font-black text-slate-900">Pertanyaan yang Sering Ditanyakan Peternak</h2>
+          </div>
+          <div className="space-y-3">
+            {[
+              ['Apa itu PetelurKu?', 'PetelurKu adalah aplikasi manajemen peternakan ayam petelur untuk mencatat produksi telur, kandang, populasi, stok dan biaya pakan, kesehatan, vaksinasi, serta keuangan.'],
+              ['Apakah PetelurKu dapat digunakan melalui HP?', 'Ya. Tampilan web PetelurKu responsif untuk HP dan komputer, serta tersedia proyek aplikasi mobile untuk pencatatan oleh petugas kandang.'],
+              ['Bagaimana biaya pakan harian dihitung?', 'Biaya dihitung dari jumlah ayam produktif, konsumsi pakan harian, persentase komposisi jagung, konsentrat dan bekatul, serta harga masing-masing bahan.'],
+              ['Apakah ayam pullet ikut dalam perhitungan biaya pakan?', 'Tidak. Kandang yang masih berstatus pullet dikeluarkan dari perhitungan biaya pakan pada dashboard.'],
+              ['Berapa lama masa uji coba gratis?', 'Peternak baru mendapatkan masa uji coba selama 15 hari setelah alamat email berhasil diaktifkan.']
+            ].map(([question, answer]) => (
+              <details key={question} className="group bg-white border border-slate-200 rounded-xl p-4">
+                <summary className="cursor-pointer list-none font-bold text-sm text-slate-900 flex items-center justify-between gap-4">
+                  {question}<ChevronRight className="w-4 h-4 text-emerald-600 transition group-open:rotate-90" />
+                </summary>
+                <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">{answer}</p>
+              </details>
+            ))}
+          </div>
+          <div className="mt-9 text-center">
+            <button onClick={() => openAuth('register', 'peternak')} className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition cursor-pointer">
+              Mulai Kelola Peternakan Gratis
+            </button>
+          </div>
         </div>
       </section>
 
