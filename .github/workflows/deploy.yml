@@ -1,0 +1,123 @@
+name: Deploy PetelurKu.com
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: petelurku-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test dan Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ambil source code
+        uses: actions/checkout@v4
+
+      - name: Siapkan Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instal dependency
+        run: npm ci
+
+      - name: Periksa TypeScript
+        run: npm run lint
+
+      - name: Uji build production
+        run: npm run build
+
+  deploy:
+    name: Deploy ke VPS
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      PROD_HOST: ${{ secrets.PROD_HOST }}
+      PROD_PORT: ${{ secrets.PROD_PORT }}
+      PROD_USER: ${{ secrets.PROD_USER }}
+
+    steps:
+      - name: Ambil source code
+        uses: actions/checkout@v4
+
+      - name: Siapkan koneksi SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PROD_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Upload source ke VPS
+        run: |
+          rsync -az --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='node_modules/' \
+            --exclude='dist/' \
+            --exclude='flutter_app/build/' \
+            --exclude='flutter_app/.dart_tool/' \
+            --exclude='*.log' \
+            -e "ssh -p $PROD_PORT" \
+            ./ "$PROD_USER@$PROD_HOST:/opt/petelurku/app/"
+
+      - name: Backup database
+        run: |
+          ssh -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" '
+            set -e
+            cd /opt/petelurku
+            mkdir -p backups
+            if docker compose ps mysql --status running --quiet | grep -q .; then
+              docker compose exec -T mysql sh -c '"'"'
+                exec mysqldump \
+                  -uroot \
+                  -p"$MYSQL_ROOT_PASSWORD" \
+                  "$MYSQL_DATABASE"
+              '"'"' > "backups/predeploy-$(date +%Y%m%d-%H%M%S).sql"
+            fi
+          '
+
+      - name: Build dan migrasi
+        run: |
+          ssh -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" '
+            set -e
+            cd /opt/petelurku
+            docker compose build app
+            docker compose run --rm app npm run db:migrate
+            docker compose up -d --remove-orphans
+            docker compose ps
+          '
+
+      - name: Periksa kesehatan aplikasi
+        run: |
+          ssh -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" '
+            set -e
+            for attempt in $(seq 1 12); do
+              if curl --fail --silent http://127.0.0.1:3000/api/health; then
+                exit 0
+              fi
+              echo "Menunggu aplikasi siap ($attempt/12)..."
+              sleep 5
+            done
+
+            echo "Health check gagal."
+            docker compose -f /opt/petelurku/compose.yaml logs --tail=100 app
+            exit 1
+          '
