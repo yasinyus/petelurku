@@ -4,3 +4,34 @@
 html {
   font-size: 17px;
 }
+
+/* Landing page is read like a marketing page, not a dense admin dashboard. */
+.landing-page .text-xs {
+  font-size: 0.9rem;
+  line-height: 1.4rem;
+}
+
+.landing-page .text-sm {
+  font-size: 1rem;
+  line-height: 1.6rem;
+}
+
+.landing-page .text-base {
+  font-size: 1.1rem;
+  line-height: 1.7rem;
+}
+
+.landing-page [class~="text-[10px]"] {
+  font-size: 0.76rem;
+  line-height: 1.15rem;
+}
+
+.landing-page [class~="text-[11px]"] {
+  font-size: 0.82rem;
+  line-height: 1.25rem;
+}
+
+.landing-page .text-2xl {
+  font-size: 1.75rem;
+  line-height: 2.2rem;
+}
