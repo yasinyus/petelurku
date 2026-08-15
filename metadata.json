@@ -1,0 +1,6 @@
+{
+  "name": "PetelurKu.com - Manajemen Kandang Ayam Petelur",
+  "description": "SaaS Platform Manajemen Kandang Ayam Petelur dengan Pemantauan Produksi Telur, Stok Pakan, Kesehatan & Vaksinasi, Analisis Finansial Real-time, E2EE Enkripsi, PDF Export, dan Mode Offline.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

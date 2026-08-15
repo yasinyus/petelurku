@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+flutter_app/build/
+flutter_app/.dart_tool/
+*.log

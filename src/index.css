@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* One typography scale for every module, including Tailwind rem-based utilities. */
+html {
+  font-size: 17px;
+}
