@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Shield, UserPlus, CheckCircle2, Lock, Mail, Phone, Crown, Stethoscope, HardHat, Briefcase, Settings } from 'lucide-react';
+import { Users, Shield, UserPlus, CheckCircle2, Lock, Mail, Phone, Crown, Stethoscope, HardHat, Briefcase, Settings, Trash2 } from 'lucide-react';
 import { Coop, Organization, User, UserRole } from '../../types';
 
 interface OrgRoleManagementProps {
@@ -8,6 +8,7 @@ interface OrgRoleManagementProps {
   currentUser: User;
   onInviteUser: (user: Omit<User, 'id'>) => Promise<void> | void;
   onUpdateMemberAccount: (id: string, data: { name: string; email: string; password?: string }) => Promise<void> | void;
+  onDeleteMember: (member: User) => Promise<void> | void;
   onAssignHouseWorker: (houseId: string, workerId: string | null) => Promise<void> | void;
 }
 
@@ -17,6 +18,7 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
   currentUser,
   onInviteUser,
   onUpdateMemberAccount,
+  onDeleteMember,
   onAssignHouseWorker
 }) => {
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -30,6 +32,7 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
   const [accountPassword, setAccountPassword] = useState('');
   const [assigningHouseId, setAssigningHouseId] = useState<string | null>(null);
   const [houseWorkerIds, setHouseWorkerIds] = useState<Record<string, string>>({});
+  const [deletingMemberId, setDeletingMemberId] = useState<string | null>(null);
 
   // Keep the access view within the active reporting line. A farm owner must
   // not see a different owner account that happens to exist in demo data.
@@ -79,6 +82,21 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
       setEditingMember(null);
     } catch (error: any) {
       window.alert(error.message || 'Gagal memperbarui akun downline');
+    }
+  };
+
+  const handleDeleteMember = async (member: User) => {
+    if (member.role === 'owner' || member.id === currentUser.id) return;
+    const confirmed = window.confirm(`Hapus akun ${member.name} (${member.role})?\n\nAkun ini akan kehilangan akses dan penugasan kandangnya akan dilepas.`);
+    if (!confirmed) return;
+    try {
+      setDeletingMemberId(member.id);
+      await onDeleteMember(member);
+      if (editingMember?.id === member.id) setEditingMember(null);
+    } catch (error: any) {
+      window.alert(error.message || 'Gagal menghapus anggota');
+    } finally {
+      setDeletingMemberId(null);
     }
   };
 
@@ -293,9 +311,14 @@ export const OrgRoleManagement: React.FC<OrgRoleManagementProps> = ({
                   {currentUser.role === 'owner' && (
                     <td className="py-3 px-4 text-center">
                       {member.id !== currentUser.id && (
-                        <button onClick={() => openAccountSettings(member)} className="p-1.5 rounded-md text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 cursor-pointer" title="Atur username dan password">
-                          <Settings className="w-4 h-4" />
-                        </button>
+                        <div className="inline-flex items-center gap-1">
+                          <button onClick={() => openAccountSettings(member)} className="p-1.5 rounded-md text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 cursor-pointer" title="Atur username dan password">
+                            <Settings className="w-4 h-4" />
+                          </button>
+                          <button disabled={deletingMemberId === member.id} onClick={() => handleDeleteMember(member)} className="p-1.5 rounded-md text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer disabled:opacity-50" title="Hapus anggota">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   )}

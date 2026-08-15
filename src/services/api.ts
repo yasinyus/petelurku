@@ -204,6 +204,12 @@ export const ApiService = {
     if (!res.ok) throw new Error((await res.json()).error || 'Gagal memperbarui akun anggota');
     return res.json();
   },
+  deleteMember: async (id: string) => {
+    const res = await fetch(`/api/members/${id}`, { method: 'DELETE' });
+    const payload = await res.json().catch(() => ({ error: 'Server mengembalikan respons tidak valid.' }));
+    if (!res.ok) throw new Error(payload.error || 'Gagal menghapus anggota');
+    return payload;
+  },
   assignHouseWorker: async (houseId: string, workerId: string | null) => {
     const res = await fetch(`/api/houses/${houseId}/worker`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workerId }) });
     if (!res.ok) throw new Error((await res.json()).error || 'Gagal menetapkan worker kandang');

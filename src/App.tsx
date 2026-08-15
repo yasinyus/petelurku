@@ -377,6 +377,20 @@ export default function App() {
     StorageService.saveOrg(updatedOrg);
   };
 
+  const handleDeleteMember = async (member: User) => {
+    if (member.role === 'owner') throw new Error('Akun owner tidak dapat dihapus.');
+    if (dataMode === 'real') {
+      await ApiService.deleteMember(member.id);
+      await loadMySQLData();
+      showToast(`Akun ${member.name} berhasil dihapus.`);
+      return;
+    }
+    const updatedOrg = { ...org, members: org.members.filter((item) => item.id !== member.id) };
+    setOrg(updatedOrg);
+    StorageService.saveOrg(updatedOrg);
+    showToast(`Akun ${member.name} berhasil dihapus.`);
+  };
+
   const handleAssignHouseWorker = async (houseId: string, workerId: string | null) => {
     if (dataMode !== 'real') return;
     await ApiService.assignHouseWorker(houseId, workerId);
@@ -648,6 +662,7 @@ export default function App() {
               currentUser={currentUser}
               onInviteUser={handleInviteUser}
               onUpdateMemberAccount={handleUpdateMemberAccount}
+              onDeleteMember={handleDeleteMember}
               onAssignHouseWorker={handleAssignHouseWorker}
             />
           )}

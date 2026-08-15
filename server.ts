@@ -734,6 +734,37 @@ async function startServer() {
     }
   });
 
+  app.delete('/api/members/:id', async (req: Request, res: Response) => {
+    const session = getSession(req)!;
+    if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat menghapus anggota.' });
+    if (req.params.id === session.user.id) return res.status(400).json({ error: 'Akun owner tidak dapat dihapus.' });
+    const connection = await getMySQLPool().getConnection();
+    try {
+      const farmId = await getCurrentFarmId(session.user.id);
+      if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
+      await connection.beginTransaction();
+      const [rows]: any = await connection.execute(
+        `SELECT u.id, u.full_name, u.role FROM farm_memberships fm
+         JOIN users u ON u.id = fm.user_id
+         WHERE fm.farm_id = ? AND fm.user_id = ? FOR UPDATE`,
+        [farmId, req.params.id]
+      );
+      if (!rows.length) { await connection.rollback(); return res.status(404).json({ error: 'Anggota tidak ditemukan pada peternakan ini.' }); }
+      if (rows[0].role === 'farm_owner' || rows[0].role === 'saas_owner') { await connection.rollback(); return res.status(400).json({ error: 'Akun owner tidak dapat dihapus.' }); }
+      await connection.execute('DELETE FROM users WHERE id = ?', [req.params.id]);
+      await connection.commit();
+      for (const [sessionId, activeSession] of sessions.entries()) {
+        if (activeSession.user.id === req.params.id) sessions.delete(sessionId);
+      }
+      return res.json({ source: 'mysql', success: true, data: { id: rows[0].id, name: rows[0].full_name } });
+    } catch (error: any) {
+      await connection.rollback();
+      return res.status(500).json({ error: error.message });
+    } finally {
+      connection.release();
+    }
+  });
+
   app.put('/api/houses/:id/worker', async (req: Request, res: Response) => {
     const session = getSession(req)!;
     const workerId = req.body.workerId ? String(req.body.workerId) : null;
