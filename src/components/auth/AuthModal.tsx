@@ -1,24 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Building2, 
-  ShieldCheck, 
-  UserCheck, 
-  Key, 
   Mail, 
   Lock, 
   User, 
   Phone, 
   MapPin, 
-  Sparkles, 
   ArrowRight, 
   X,
   CheckCircle2,
-  Crown,
-  Briefcase,
-  HardHat,
-  Zap
 } from 'lucide-react';
-import { UserRole, SubscriptionPlan } from '../../types';
+import { SubscriptionPlan } from '../../types';
 import { ApiService } from '../../services/api';
 
 interface AuthModalProps {
@@ -26,7 +18,6 @@ interface AuthModalProps {
   onClose: () => void;
   onLoginSuccess: (userType: 'peternak' | 'saas_owner', userData?: any) => void;
   initialMode?: 'login' | 'register';
-  initialUserType?: 'peternak' | 'saas_owner';
   initialPlan?: SubscriptionPlan;
 }
 
@@ -35,11 +26,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onLoginSuccess,
   initialMode = 'login',
-  initialUserType = 'peternak',
   initialPlan = 'pro'
 }) => {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
-  const [userType, setUserType] = useState<'peternak' | 'saas_owner'>(initialUserType);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -56,9 +45,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     setMode(initialMode);
-    setUserType(initialUserType);
     setSelectedPlan(initialPlan);
-  }, [isOpen, initialMode, initialUserType, initialPlan]);
+  }, [isOpen, initialMode, initialPlan]);
 
   if (!isOpen) return null;
 
@@ -79,23 +67,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       const result = await ApiService.login(email, password);
       setIsLoading(false);
       if (!result.success) return setErrorMsg(result.message || 'Login gagal');
-      onLoginSuccess(userType, result.user);
-      onClose();
-    } catch (error: any) {
-      setIsLoading(false);
-      setErrorMsg(error.message || 'Login gagal');
-    }
-  };
-
-  const handleQuickDemoLogin = async (roleType: 'farm_owner' | 'farm_worker' | 'saas_owner') => {
-    setIsLoading(true);
-    setErrorMsg('');
-    try {
-      const demoEmail = roleType === 'saas_owner' ? 'admin@chicksync.saas' : 'yasin@barokahfarm.id';
-      const result = await ApiService.login(demoEmail);
-      setIsLoading(false);
-      if (!result.success) return setErrorMsg(result.message || 'Login gagal');
-      onLoginSuccess(roleType === 'saas_owner' ? 'saas_owner' : 'peternak', result.user);
+      onLoginSuccess('peternak', result.user);
       onClose();
     } catch (error: any) {
       setIsLoading(false);
@@ -124,103 +96,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        {/* User Type Switcher (Peternak vs SaaS Owner) */}
-        <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
-          <button
-            type="button"
-            onClick={() => {
-              setUserType('peternak');
-              setErrorMsg('');
-            }}
-            className={`flex-1 py-2 rounded-lg font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
-              userType === 'peternak'
-                ? 'bg-white text-emerald-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Building2 className="w-4 h-4 text-emerald-600" />
-            Portal Peternak / User
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setUserType('saas_owner');
-              setErrorMsg('');
-            }}
-            className={`flex-1 py-2 rounded-lg font-bold transition cursor-pointer flex items-center justify-center gap-2 ${
-              userType === 'saas_owner'
-                ? 'bg-white text-emerald-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Crown className="w-4 h-4 text-amber-600" />
-            Portal Admin
-          </button>
-        </div>
-
         {/* Header Title */}
         <div className="text-center mb-6">
           <h2 className="text-xl font-extrabold text-slate-900">
-            {userType === 'saas_owner' ? (
-              <span className="flex items-center justify-center gap-2">
-                <ShieldCheck className="w-6 h-6 text-emerald-600" />
-                Login Super Admin PetelurKu.com
-              </span>
-            ) : mode === 'login' ? (
+            {mode === 'login' ? (
               'Masuk Aplikasi PetelurKu.com'
             ) : (
               'Daftarkan Peternakan Anda'
             )}
           </h2>
           <p className="text-slate-500 mt-1">
-            {userType === 'saas_owner'
-              ? 'Kelola sistem berlangganan, peternakan, dan arus kas platform.'
-              : mode === 'login'
+            {mode === 'login'
               ? 'Akses catatan produksi panen, stok pakan, dan rekam medis kandang.'
               : 'Mulai uji coba gratis 14 hari tanpa kartu kredit.'}
           </p>
         </div>
 
-        {/* Quick Demo Login Presets */}
-        <div className="mb-6 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
-          <div className="font-bold text-emerald-900 flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-emerald-600" /> Masuk Cepat dengan Akun Demo (1-Click):
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickDemoLogin('farm_owner')}
-              className="px-2.5 py-1.5 bg-white border border-emerald-300 hover:bg-emerald-100/50 rounded-lg text-[11px] font-bold text-emerald-900 text-left transition cursor-pointer"
-            >
-              👑 Owner Farm
-              <div className="text-[9px] text-slate-500 font-normal">H. Yasin (Blitar)</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickDemoLogin('farm_worker')}
-              className="px-2.5 py-1.5 bg-white border border-teal-300 hover:bg-teal-100/50 rounded-lg text-[11px] font-bold text-teal-900 text-left transition cursor-pointer"
-            >
-              👷 Anak Kandang
-              <div className="text-[9px] text-slate-500 font-normal">Input Panen Telur</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickDemoLogin('saas_owner')}
-              className="px-2.5 py-1.5 bg-white border border-amber-300 hover:bg-amber-100/50 rounded-lg text-[11px] font-bold text-amber-900 text-left transition cursor-pointer"
-            >
-              🛡️ Super Admin
-              <div className="text-[9px] text-slate-500 font-normal">Admin Platform</div>
-            </button>
-          </div>
-        </div>
-
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
           
-          {userType === 'peternak' && mode === 'register' && (
+          {mode === 'register' && (
             <>
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">Nama Peternakan / Usaha Layer</label>
@@ -291,7 +186,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type="email"
-                placeholder={userType === 'saas_owner' ? 'admin@chicksync.saas' : 'yasin@barokahfarm.id'}
+                placeholder="nama@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -339,10 +234,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           >
             {isLoading ? (
               <span>Memproses Verifikasi...</span>
-            ) : userType === 'saas_owner' ? (
-              <>
-                <ShieldCheck className="w-4 h-4" /> Masuk Portal Admin
-              </>
             ) : mode === 'login' ? (
               <>
                 Masuk ke Dashboard Peternakan <ArrowRight className="w-4 h-4" />
@@ -356,8 +247,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </form>
 
         {/* Footer Toggle Login/Register */}
-        {userType === 'peternak' && (
-          <div className="mt-5 pt-4 border-t border-slate-100 text-center text-slate-500">
+        <div className="mt-5 pt-4 border-t border-slate-100 text-center text-slate-500">
             {mode === 'login' ? (
               <p>
                 Belum memiliki akun peternakan?{' '}
@@ -381,8 +271,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               </p>
             )}
-          </div>
-        )}
+        </div>
 
       </div>
     </div>

@@ -11,7 +11,9 @@ import {
   ChevronRight, 
   DollarSign, 
   Crown,
-  Egg
+  Egg,
+  MapPin,
+  MessageCircle
 } from 'lucide-react';
 import { AuthModal } from '../auth/AuthModal';
 
@@ -22,18 +24,16 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register'>('login');
-  const [authInitialType, setAuthInitialType] = useState<'peternak' | 'saas_owner'>('peternak');
   const [authInitialPlan, setAuthInitialPlan] = useState<'basic' | 'pro' | 'enterprise'>('pro');
 
-  const openAuth = (mode: 'login' | 'register', type: 'peternak' | 'saas_owner' = 'peternak') => {
+  const openAuth = (mode: 'login' | 'register') => {
     setAuthInitialMode(mode);
-    setAuthInitialType(type);
     setShowAuthModal(true);
   };
 
   const openPlanRegistration = (plan: 'basic' | 'pro' | 'enterprise') => {
     setAuthInitialPlan(plan);
-    openAuth('register', 'peternak');
+    openAuth('register');
   };
 
   return (
@@ -66,22 +66,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
           {/* CTA Buttons */}
           <div className="flex items-center gap-2.5">
             <button
-              onClick={() => openAuth('login', 'saas_owner')}
-              className="px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer hidden sm:flex items-center gap-1.5"
-            >
-              <Crown className="w-3.5 h-3.5 text-amber-600" />
-              Admin
-            </button>
-
-            <button
-              onClick={() => openAuth('login', 'peternak')}
+              onClick={() => openAuth('login')}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
             >
               Masuk
             </button>
 
             <button
-              onClick={() => openAuth('register', 'peternak')}
+              onClick={() => openAuth('register')}
               className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer shadow-xs flex items-center gap-1.5"
             >
               <Zap className="w-3.5 h-3.5" />
@@ -96,7 +88,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
       <section className="relative overflow-hidden pt-12 pb-16 md:pt-20 md:pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="text-center max-w-3xl mx-auto space-y-5">
+          <div className="grid lg:grid-cols-[1.05fr_0.95fr] items-center gap-9 lg:gap-12">
+          <div className="text-center lg:text-left space-y-5">
             
             <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-full text-emerald-800 text-xs font-bold shadow-2xs">
               <Sparkles className="w-4 h-4 text-emerald-600" />
@@ -112,7 +105,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             </p>
 
             {/* CTAs */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-3">
               <button
                 onClick={() => openPlanRegistration('pro')}
                 className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition cursor-pointer shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2"
@@ -130,7 +123,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             </div>
 
             {/* Feature Pills */}
-            <div className="pt-6 flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-slate-600">
+            <div className="pt-6 flex flex-wrap items-center justify-center lg:justify-start gap-3 text-xs font-semibold text-slate-600">
               <span className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-2xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Mudah Dipakai di HP dan Komputer
               </span>
@@ -142,6 +135,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               </span>
             </div>
 
+          </div>
+
+          <div className="relative hidden sm:block" aria-hidden="true">
+            <div className="absolute -inset-8 bg-emerald-100/50 blur-3xl rounded-full" />
+            <div className="relative overflow-hidden rounded-[2rem] border border-white/80 shadow-xl shadow-emerald-950/10 bg-emerald-50 aspect-[4/3]">
+              <img
+                src="/petelurku-hero-farm.webp"
+                alt=""
+                className="h-full w-full object-cover object-[68%_center] opacity-90"
+                fetchPriority="high"
+              />
+              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-950/10 via-transparent to-white/25" />
+              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-emerald-950/20 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/60 bg-white/75 backdrop-blur-md px-4 py-3 shadow-sm">
+                <p className="text-xs font-extrabold text-slate-800">Catatan kandang dalam genggaman</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">Pantau produksi dan kondisi ayam langsung dari lokasi peternakan.</p>
+              </div>
+            </div>
+          </div>
           </div>
 
           {/* Interactive Live App Visual Mockup */}
@@ -463,7 +475,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             ))}
           </div>
           <div className="mt-9 text-center">
-            <button onClick={() => openAuth('register', 'peternak')} className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition cursor-pointer">
+            <button onClick={() => openAuth('register')} className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition cursor-pointer">
               Mulai Kelola Peternakan Gratis
             </button>
           </div>
@@ -472,22 +484,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
 
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 text-xs py-10 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center font-black">
-              🥚
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid gap-7 md:grid-cols-[1fr_auto_1fr] items-center">
+          <div className="flex items-center justify-center md:justify-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-950/30">
+              <Egg className="w-5 h-5" strokeWidth={2.5} />
             </div>
-            <span className="font-bold text-slate-100">PetelurKu.com &copy; 2026</span>
+            <div>
+              <div className="font-extrabold text-sm text-white">PetelurKu.com</div>
+              <div className="mt-0.5">&copy; 2026 · Manajemen peternakan modern</div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <button onClick={() => openAuth('login', 'peternak')} className="hover:text-emerald-400 cursor-pointer">
-              Login Peternak
-            </button>
-            <button onClick={() => openAuth('login', 'saas_owner')} className="hover:text-amber-400 cursor-pointer flex items-center gap-1">
-              <Crown className="w-3.5 h-3.5 text-amber-400" />
-              Portal Admin
-            </button>
+          <div className="text-center md:px-8 md:border-x md:border-slate-700/70">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-400">Developed By</p>
+            <p className="mt-1 font-extrabold text-sm text-slate-100">AUUF Farm</p>
+            <p className="mt-1 flex items-center justify-center gap-1.5 text-slate-400">
+              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+              Blitar, Indonesia
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center md:items-end gap-2.5">
+            <p className="font-semibold text-slate-300">Butuh bantuan atau ingin berkonsultasi?</p>
+            <a
+              href="https://wa.me/6285707104107?text=Saya%20ingin%20bertanya%20tentang%20App%20Petelurku.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Konsultasi WhatsApp di 085707104107"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 font-extrabold text-slate-950 shadow-lg shadow-emerald-950/30 transition hover:-translate-y-0.5 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Konsultasi WA · 085707104107
+            </a>
           </div>
         </div>
       </footer>
@@ -500,7 +528,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
           onOpenApp(userType, userData);
         }}
         initialMode={authInitialMode}
-        initialUserType={authInitialType}
         initialPlan={authInitialPlan}
       />
 

@@ -104,7 +104,9 @@ async function startServer() {
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(self)');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-    res.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'");
+    const scriptPolicy = process.env.NODE_ENV === 'production' ? "script-src 'self'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+    const connectPolicy = process.env.NODE_ENV === 'production' ? "connect-src 'self'" : "connect-src 'self' ws: wss:";
+    res.setHeader('Content-Security-Policy', `default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; ${scriptPolicy}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; ${connectPolicy}`);
     if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
   });
