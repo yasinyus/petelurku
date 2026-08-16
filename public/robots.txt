@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.petelurku.com/sitemap.xml
+Sitemap: https://petelurku.com/sitemap.xml
