@@ -6,14 +6,18 @@ class AppUser {
   final String email;
   final String role;
 
-  const AppUser({required this.id, required this.name, required this.email, required this.role});
+  const AppUser(
+      {required this.id,
+      required this.name,
+      required this.email,
+      required this.role});
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
-    id: json['id']?.toString() ?? '',
-    name: json['name']?.toString() ?? '',
-    email: json['email']?.toString() ?? '',
-    role: json['role']?.toString() ?? '',
-  );
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+        email: json['email']?.toString() ?? '',
+        role: json['role']?.toString() ?? '',
+      );
 }
 
 class Farm {
@@ -39,8 +43,10 @@ class Farm {
       name: json['name'] ?? '',
       ownerName: json['owner_name'] ?? json['ownerName'] ?? '',
       city: json['city'] ?? '',
-      subscriptionPlan: json['subscription_plan'] ?? json['subscriptionPlan'] ?? 'pro',
-      mrrAmount: (json['mrr_amount'] ?? json['mrrAmount'] ?? 1500000).toDouble(),
+      subscriptionPlan:
+          json['subscription_plan'] ?? json['subscriptionPlan'] ?? 'pro',
+      mrrAmount:
+          (json['mrr_amount'] ?? json['mrrAmount'] ?? 1500000).toDouble(),
     );
   }
 }
@@ -71,8 +77,10 @@ class House {
       code: json['code'] ?? '',
       name: json['name'] ?? '',
       chickenType: json['chicken_type'] ?? json['chickenType'] ?? 'Isa Brown',
-      initialChickens: asInt(json['initial_chickens'] ?? json['initialChickens']),
-      currentChickens: asInt(json['current_chickens'] ?? json['currentChickens']),
+      initialChickens:
+          asInt(json['initial_chickens'] ?? json['initialChickens']),
+      currentChickens:
+          asInt(json['current_chickens'] ?? json['currentChickens']),
       ageWeeks: asInt(json['age_weeks'] ?? json['ageWeeks']),
     );
   }
@@ -107,16 +115,19 @@ class HarvestLog {
 
   factory HarvestLog.fromJson(Map<String, dynamic> json) {
     int asInt(dynamic value) => int.tryParse(value?.toString() ?? '') ?? 0;
-    double asDouble(dynamic value) => double.tryParse(value?.toString() ?? '') ?? 0;
+    double asDouble(dynamic value) =>
+        double.tryParse(value?.toString() ?? '') ?? 0;
     return HarvestLog(
       id: json['id'] ?? '',
       houseId: json['house_id'] ?? json['houseId'] ?? '',
       harvestDate: json['harvest_date'] ?? json['harvestDate'] ?? '',
       timeSlot: json['time_slot'] ?? json['timeSlot'] ?? 'pagi',
       goodEggsCount: asInt(json['good_eggs_count'] ?? json['goodEggsCount']),
-      damagedEggsCount: asInt(json['damaged_eggs_count'] ?? json['damagedEggsCount']),
+      damagedEggsCount:
+          asInt(json['damaged_eggs_count'] ?? json['damagedEggsCount']),
       weightKg: asDouble(json['weight_kg'] ?? json['weightKg']),
-      henDayPercentage: asDouble(json['hen_day_percentage'] ?? json['henDayPercentage']),
+      henDayPercentage:
+          asDouble(json['hen_day_percentage'] ?? json['henDayPercentage']),
       deathCount: asInt(json['death_count'] ?? json['deathCount']),
       feedKg: asDouble(json['feed_kg'] ?? json['feedKg']),
       notes: json['notes']?.toString() ?? '',
