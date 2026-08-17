@@ -96,11 +96,11 @@ export const ApiService = {
     return res.json();
   },
 
-  createSubscriptionCheckout: async (planId: 'basic' | 'pro' | 'enterprise') => {
+  createSubscriptionCheckout: async (planId: 'basic' | 'pro' | 'enterprise', billingCycle: 'monthly' | 'annual') => {
     const res = await fetch('/api/subscriptions/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planId })
+      body: JSON.stringify({ planId, billingCycle })
     });
     const payload = await res.json().catch(() => ({ error: 'Respons pembayaran tidak valid.' }));
     if (!res.ok) throw new Error(payload.error || 'Gagal membuat pembayaran.');

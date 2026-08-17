@@ -24,9 +24,9 @@ const calculateAgeWeeks = (entryDate: string) => {
 const SESSION_TTL_MS = 1000 * 60 * 60 * 8;
 const sessions = new Map<string, { user: { id: string; name: string; email: string; role: string }; expiresAt: number }>();
 const SUBSCRIPTION_PLANS = {
-  basic: { name: 'PetelurKu Basic', monthlyPrice: 49000, maxHouses: 2, maxUsers: 2 },
-  pro: { name: 'PetelurKu Pro', monthlyPrice: 99000, maxHouses: 10, maxUsers: 10 },
-  enterprise: { name: 'PetelurKu Bisnis', monthlyPrice: 199000, maxHouses: null, maxUsers: 30 }
+  basic: { name: 'PetelurKu Basic', monthlyPrice: 49000, annualPrice: 490000, maxHouses: 2, maxUsers: 2 },
+  pro: { name: 'PetelurKu Pro', monthlyPrice: 150000, annualPrice: 1500000, maxHouses: 10, maxUsers: 10 },
+  enterprise: { name: 'PetelurKu Bisnis', monthlyPrice: 299000, annualPrice: 2990000, maxHouses: 30, maxUsers: 30 }
 } as const;
 type SubscriptionPlanId = keyof typeof SUBSCRIPTION_PLANS;
 const isSubscriptionPlan = (value: unknown): value is SubscriptionPlanId => typeof value === 'string' && value in SUBSCRIPTION_PLANS;
@@ -194,7 +194,7 @@ async function startServer() {
         city: 'Blitar',
         subscriptionPlan: 'pro',
         subscriptionStatus: 'active',
-        mrrAmount: 99000,
+        mrrAmount: 150000,
         createdAt: new Date().toISOString()
       }
     ],
@@ -469,7 +469,7 @@ async function startServer() {
       const connection = await getMySQLPool().getConnection();
       try {
         await connection.beginTransaction();
-        const [rows]: any = await connection.execute('SELECT id, farm_id, plan_type, amount, status FROM saas_subscriptions WHERE midtrans_order_id = ? FOR UPDATE', [orderId]);
+        const [rows]: any = await connection.execute('SELECT id, farm_id, plan_type, amount, billing_cycle, status FROM saas_subscriptions WHERE midtrans_order_id = ? FOR UPDATE', [orderId]);
         if (!rows.length) { await connection.rollback(); return res.status(404).json({ error: 'Pesanan tidak ditemukan.' }); }
         const subscription = rows[0];
         if (Number(payment.gross_amount) !== Number(subscription.amount)) { await connection.rollback(); return res.status(400).json({ error: 'Nominal pembayaran tidak sesuai.' }); }
@@ -477,10 +477,11 @@ async function startServer() {
         if (paid && subscription.status !== 'active') {
           const [expiryRows]: any = await connection.execute("SELECT GREATEST(NOW(), COALESCE(MAX(expires_at), NOW())) AS base_expiry FROM saas_subscriptions WHERE farm_id = ? AND status = 'active' AND id <> ?", [subscription.farm_id, subscription.id]);
           await connection.execute(
-            "UPDATE saas_subscriptions SET status = 'active', payment_type = ?, paid_at = NOW(), expires_at = DATE_ADD(?, INTERVAL 1 MONTH) WHERE id = ?",
+            `UPDATE saas_subscriptions SET status = 'active', payment_type = ?, paid_at = NOW(), expires_at = DATE_ADD(?, INTERVAL 1 ${subscription.billing_cycle === 'annual' ? 'YEAR' : 'MONTH'}) WHERE id = ?`,
             [payment.payment_type || null, expiryRows[0].base_expiry, subscription.id]
           );
-          await connection.execute("UPDATE farms SET subscription_plan = ?, subscription_status = 'active', mrr_amount = ? WHERE id = ?", [subscription.plan_type, subscription.amount, subscription.farm_id]);
+          const monthlyRevenue = isSubscriptionPlan(subscription.plan_type) ? SUBSCRIPTION_PLANS[subscription.plan_type].monthlyPrice : subscription.amount;
+          await connection.execute("UPDATE farms SET subscription_plan = ?, subscription_status = 'active', mrr_amount = ? WHERE id = ?", [subscription.plan_type, monthlyRevenue, subscription.farm_id]);
         } else if (['deny', 'cancel', 'expire', 'failure'].includes(payment.transaction_status) && subscription.status !== 'active') {
           await connection.execute("UPDATE saas_subscriptions SET status = 'failed', payment_type = ? WHERE id = ?", [payment.payment_type || null, subscription.id]);
         }
@@ -543,7 +544,7 @@ async function startServer() {
     try {
       await connection.beginTransaction();
       const [rows]: any = await connection.execute(
-        "SELECT id, farm_id, plan_type, amount, status FROM saas_subscriptions WHERE midtrans_order_id = ? AND farm_id = ? FOR UPDATE",
+        "SELECT id, farm_id, plan_type, amount, billing_cycle, status FROM saas_subscriptions WHERE midtrans_order_id = ? AND farm_id = ? FOR UPDATE",
         [orderId, farmId]
       );
       if (!rows.length) { await connection.rollback(); return false; }
@@ -555,13 +556,14 @@ async function startServer() {
           [farmId, subscription.id]
         );
         await connection.execute(
-          "UPDATE saas_subscriptions SET status = 'active', payment_type = ?, paid_at = NOW(), expires_at = DATE_ADD(?, INTERVAL 1 MONTH) WHERE id = ?",
+          `UPDATE saas_subscriptions SET status = 'active', payment_type = ?, paid_at = NOW(), expires_at = DATE_ADD(?, INTERVAL 1 ${subscription.billing_cycle === 'annual' ? 'YEAR' : 'MONTH'}) WHERE id = ?`,
           [payment.payment_type || null, expiryRows[0].base_expiry, subscription.id]
         );
       }
+      const monthlyRevenue = isSubscriptionPlan(subscription.plan_type) ? SUBSCRIPTION_PLANS[subscription.plan_type].monthlyPrice : subscription.amount;
       await connection.execute(
         "UPDATE farms SET subscription_plan = ?, subscription_status = 'active', mrr_amount = ? WHERE id = ?",
-        [subscription.plan_type, subscription.amount, farmId]
+        [subscription.plan_type, monthlyRevenue, farmId]
       );
       await connection.commit();
       return true;
@@ -576,6 +578,7 @@ async function startServer() {
   app.post('/api/subscriptions/checkout', async (req: Request, res: Response) => {
     const session = getSession(req)!;
     const planId = req.body.planId;
+    const billingCycle = req.body.billingCycle === 'annual' ? 'annual' : 'monthly';
     if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat melakukan pembayaran.' });
     if (!isSubscriptionPlan(planId)) return res.status(400).json({ error: 'Paket tidak valid.' });
     if (!process.env.MIDTRANS_SERVER_KEY) return res.status(503).json({ error: 'Midtrans belum dikonfigurasi oleh admin.' });
@@ -584,19 +587,22 @@ async function startServer() {
       if (!farmId) return res.status(403).json({ error: 'Peternakan tidak ditemukan.' });
       const farmRows: any[] = await queryMySQL('SELECT name FROM farms WHERE id = ? LIMIT 1', [farmId]);
       const plan = SUBSCRIPTION_PLANS[planId];
+      const amount = billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice;
+      const durationLabel = billingCycle === 'annual' ? '1 tahun' : '1 bulan';
       const subscriptionId = crypto.randomUUID();
       const orderId = `PK-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
       await queryMySQL(
-        "INSERT INTO saas_subscriptions (id, farm_id, plan_type, amount, billing_cycle, status, midtrans_order_id, expires_at) VALUES (?, ?, ?, ?, 'monthly', 'pending', ?, DATE_ADD(NOW(), INTERVAL 1 MONTH))",
-        [subscriptionId, farmId, planId, plan.monthlyPrice, orderId]
+        `INSERT INTO saas_subscriptions (id, farm_id, plan_type, amount, billing_cycle, status, midtrans_order_id, expires_at)
+         VALUES (?, ?, ?, ?, ?, 'pending', ?, ${billingCycle === 'annual' ? 'DATE_ADD(NOW(), INTERVAL 1 YEAR)' : 'DATE_ADD(NOW(), INTERVAL 1 MONTH)'})`,
+        [subscriptionId, farmId, planId, amount, billingCycle, orderId]
       );
       const appUrl = (process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
       const response = await fetch(`${midtransSnapBase()}/snap/v1/transactions`, {
         method: 'POST',
         headers: { Authorization: midtransAuthorization(), Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          transaction_details: { order_id: orderId, gross_amount: plan.monthlyPrice },
-          item_details: [{ id: planId, price: plan.monthlyPrice, quantity: 1, name: `${plan.name} - 1 bulan` }],
+          transaction_details: { order_id: orderId, gross_amount: amount },
+          item_details: [{ id: `${planId}-${billingCycle}`, price: amount, quantity: 1, name: `${plan.name} - ${durationLabel}` }],
           customer_details: { first_name: session.user.name, email: session.user.email },
           callbacks: { finish: `${appUrl}/?payment=finish&order_id=${encodeURIComponent(orderId)}` },
           custom_field1: farmId,
@@ -608,7 +614,7 @@ async function startServer() {
         await queryMySQL("UPDATE saas_subscriptions SET status = 'failed' WHERE id = ?", [subscriptionId]);
         throw new Error(payload.error_messages?.join(', ') || 'Midtrans tidak dapat membuat halaman pembayaran.');
       }
-      return res.status(201).json({ success: true, orderId, redirectUrl: payload.redirect_url, amount: plan.monthlyPrice });
+      return res.status(201).json({ success: true, orderId, redirectUrl: payload.redirect_url, amount, billingCycle });
     } catch (error: any) {
       console.error('Midtrans checkout error:', error.message);
       return res.status(502).json({ error: error.message || 'Gagal membuat pembayaran.' });
@@ -1286,7 +1292,7 @@ async function startServer() {
       );
       if (!existingRows.length) { await connection.rollback(); return res.status(404).json({ error: 'Data produksi tidak ditemukan.' }); }
       const existing = existingRows[0];
-      if (String(existing.harvest_date).slice(0, 10) !== getJakartaDate() || harvestDate !== getJakartaDate()) {
+      if (session.user.role !== 'owner' && (String(existing.harvest_date).slice(0, 10) !== getJakartaDate() || harvestDate !== getJakartaDate())) {
         await connection.rollback();
         return res.status(403).json({ error: 'Hanya produksi hari ini yang dapat diedit.' });
       }
@@ -1636,6 +1642,28 @@ async function startServer() {
     }
   });
 
+  app.patch('/api/feeds/:id', async (req: Request, res: Response) => {
+    const session = getSession(req)!;
+    if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat mengubah pakan.' });
+    const farmId = await getCurrentFarmId(session.user.id);
+    const { name, stockKg, minThresholdKg, pricePerKg } = req.body;
+    const result: any = await queryMySQL(
+      'UPDATE feed_inventory SET feed_name = ?, current_stock_kg = ?, min_threshold_kg = ?, price_per_kg = ? WHERE id = ? AND farm_id = ?',
+      [name, Number(stockKg), Number(minThresholdKg), Number(pricePerKg), req.params.id, farmId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ error: 'Pakan tidak ditemukan.' });
+    return res.json({ source: 'mysql', success: true });
+  });
+
+  app.delete('/api/feeds/:id', async (req: Request, res: Response) => {
+    const session = getSession(req)!;
+    if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat menghapus pakan.' });
+    const farmId = await getCurrentFarmId(session.user.id);
+    const result: any = await queryMySQL('DELETE FROM feed_inventory WHERE id = ? AND farm_id = ?', [req.params.id, farmId]);
+    if (!result.affectedRows) return res.status(404).json({ error: 'Pakan tidak ditemukan.' });
+    return res.json({ source: 'mysql', success: true });
+  });
+
   // 7. Medical & Vaccination API
   app.get('/api/vaccinations', async (req: Request, res: Response) => {
     try {
@@ -1680,6 +1708,30 @@ async function startServer() {
     }
   });
 
+  app.patch('/api/vaccinations/:id', async (req: Request, res: Response) => {
+    const session = getSession(req)!;
+    if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat mengubah vaksinasi.' });
+    const farmId = await getCurrentFarmId(session.user.id);
+    const data = req.body;
+    const result: any = await queryMySQL(
+      `UPDATE vaccination_logs vl INNER JOIN houses h ON h.id = vl.house_id
+       SET vl.house_id = ?, vl.vaccine_name = ?, vl.disease_target = ?, vl.scheduled_date = ?, vl.status = ?, vl.notes = ?
+       WHERE vl.id = ? AND h.farm_id = ?`,
+      [data.houseId, data.vaccineName, data.diseaseTarget, data.scheduledDate, data.status || 'scheduled', data.notes || null, req.params.id, farmId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ error: 'Vaksinasi tidak ditemukan.' });
+    return res.json({ source: 'mysql', success: true });
+  });
+
+  app.delete('/api/vaccinations/:id', async (req: Request, res: Response) => {
+    const session = getSession(req)!;
+    if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat menghapus vaksinasi.' });
+    const farmId = await getCurrentFarmId(session.user.id);
+    const result: any = await queryMySQL('DELETE vl FROM vaccination_logs vl INNER JOIN houses h ON h.id = vl.house_id WHERE vl.id = ? AND h.farm_id = ?', [req.params.id, farmId]);
+    if (!result.affectedRows) return res.status(404).json({ error: 'Vaksinasi tidak ditemukan.' });
+    return res.json({ source: 'mysql', success: true });
+  });
+
   app.get('/api/health-logs', async (req: Request, res: Response) => {
     try {
       const farmId = await getCurrentFarmId(getSession(req)!.user.id);
@@ -1709,6 +1761,30 @@ async function startServer() {
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
+  });
+
+  app.patch('/api/health-logs/:id', async (req: Request, res: Response) => {
+    const session = getSession(req)!;
+    if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat mengubah catatan kesehatan.' });
+    const farmId = await getCurrentFarmId(session.user.id);
+    const data = req.body;
+    const rows: any[] = await queryMySQL('SELECT hl.* FROM health_logs hl INNER JOIN houses h ON h.id = hl.house_id WHERE hl.id = ? AND h.farm_id = ?', [req.params.id, farmId]);
+    if (!rows.length) return res.status(404).json({ error: 'Catatan kesehatan tidak ditemukan.' });
+    await queryMySQL('UPDATE houses SET current_chickens = current_chickens + ? WHERE id = ? AND farm_id = ?', [Number(rows[0].mortality_count) + Number(rows[0].culled_count), rows[0].house_id, farmId]);
+    await queryMySQL('UPDATE health_logs SET house_id = ?, record_date = ?, mortality_count = ?, culled_count = ?, diagnosis = ? WHERE id = ?', [data.houseId, data.date, Number(data.mortalityCount) || 0, Number(data.culledCount) || 0, data.diagnosis || null, req.params.id]);
+    await queryMySQL('UPDATE houses SET current_chickens = GREATEST(0, current_chickens - ?) WHERE id = ? AND farm_id = ?', [(Number(data.mortalityCount) || 0) + (Number(data.culledCount) || 0), data.houseId, farmId]);
+    return res.json({ source: 'mysql', success: true });
+  });
+
+  app.delete('/api/health-logs/:id', async (req: Request, res: Response) => {
+    const session = getSession(req)!;
+    if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat menghapus catatan kesehatan.' });
+    const farmId = await getCurrentFarmId(session.user.id);
+    const rows: any[] = await queryMySQL('SELECT hl.* FROM health_logs hl INNER JOIN houses h ON h.id = hl.house_id WHERE hl.id = ? AND h.farm_id = ?', [req.params.id, farmId]);
+    if (!rows.length) return res.status(404).json({ error: 'Catatan kesehatan tidak ditemukan.' });
+    await queryMySQL('UPDATE houses SET current_chickens = current_chickens + ? WHERE id = ? AND farm_id = ?', [Number(rows[0].mortality_count) + Number(rows[0].culled_count), rows[0].house_id, farmId]);
+    await queryMySQL('DELETE FROM health_logs WHERE id = ?', [req.params.id]);
+    return res.json({ source: 'mysql', success: true });
   });
 
   // 8. Financial Transactions API
@@ -1742,6 +1818,25 @@ async function startServer() {
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
+  });
+
+  app.patch('/api/finances/:id', async (req: Request, res: Response) => {
+    const session = getSession(req)!;
+    if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat mengubah transaksi.' });
+    const farmId = await getCurrentFarmId(session.user.id);
+    const data = req.body;
+    const result: any = await queryMySQL('UPDATE financial_records SET transaction_type = ?, category = ?, amount = ?, transaction_date = ?, description = ? WHERE id = ? AND farm_id = ?', [data.type, data.category, Number(data.amount), data.date, data.description, req.params.id, farmId]);
+    if (!result.affectedRows) return res.status(404).json({ error: 'Transaksi tidak ditemukan.' });
+    return res.json({ source: 'mysql', success: true });
+  });
+
+  app.delete('/api/finances/:id', async (req: Request, res: Response) => {
+    const session = getSession(req)!;
+    if (session.user.role !== 'owner') return res.status(403).json({ error: 'Hanya owner yang dapat menghapus transaksi.' });
+    const farmId = await getCurrentFarmId(session.user.id);
+    const result: any = await queryMySQL('DELETE FROM financial_records WHERE id = ? AND farm_id = ?', [req.params.id, farmId]);
+    if (!result.affectedRows) return res.status(404).json({ error: 'Transaksi tidak ditemukan.' });
+    return res.json({ source: 'mysql', success: true });
   });
 
   // -------------------------------------------------------------

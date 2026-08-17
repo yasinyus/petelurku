@@ -40,7 +40,7 @@ const INITIAL_TENANTS: SaaSTenantOrg[] = [
     city: 'Blitar, Jawa Timur',
     plan: 'pro',
     status: 'active',
-    monthlyRevenue: 99000,
+    monthlyRevenue: 150000,
     totalCoops: 3,
     totalChickens: 5425,
     joinedDate: '2025-10-12',
@@ -57,7 +57,7 @@ const INITIAL_TENANTS: SaaSTenantOrg[] = [
     city: 'Malang, Jawa Timur',
     plan: 'enterprise',
     status: 'active',
-    monthlyRevenue: 199000,
+    monthlyRevenue: 299000,
     totalCoops: 12,
     totalChickens: 35000,
     joinedDate: '2025-08-01',
@@ -125,7 +125,7 @@ const INITIAL_TENANTS: SaaSTenantOrg[] = [
     city: 'Lampung Selatan',
     plan: 'enterprise',
     status: 'active',
-    monthlyRevenue: 199000,
+    monthlyRevenue: 299000,
     totalCoops: 15,
     totalChickens: 42000,
     joinedDate: '2025-06-10',
@@ -140,7 +140,7 @@ const INITIAL_TRANSACTIONS: SaaSPaymentTransaction[] = [
     id: 'pay-1001',
     orgId: 'org-1',
     orgName: 'Peternakan Barokah Layer Farm',
-    amount: 99000,
+    amount: 150000,
     plan: 'pro',
     paymentMethod: 'QRIS Instant (Gopay)',
     gateway: 'Midtrans',
@@ -152,7 +152,7 @@ const INITIAL_TRANSACTIONS: SaaSPaymentTransaction[] = [
     id: 'pay-1002',
     orgId: 'org-2',
     orgName: 'PT Avian Jaya Nusantara',
-    amount: 199000,
+    amount: 299000,
     plan: 'enterprise',
     paymentMethod: 'BCA Virtual Account',
     gateway: 'Midtrans',
@@ -188,7 +188,7 @@ const INITIAL_TRANSACTIONS: SaaSPaymentTransaction[] = [
     id: 'pay-1005',
     orgId: 'org-4',
     orgName: 'Lumbung Telur Sejahtera',
-    amount: 99000,
+    amount: 150000,
     plan: 'pro',
     paymentMethod: 'QRIS Instant',
     gateway: 'Midtrans',
@@ -298,7 +298,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
     e.preventDefault();
     if (!newOrgName || !newOwnerName || !newEmail) return;
 
-    const planPrices = { basic: 49000, pro: 99000, enterprise: 199000 };
+    const planPrices = { basic: 49000, pro: 150000, enterprise: 299000 };
     const newTenant: SaaSTenantOrg = {
       id: `org-${Date.now()}`,
       name: newOrgName,
@@ -546,7 +546,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
             {/* Enterprise Bar */}
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between font-bold">
-                <span className="text-purple-700">Bisnis (Rp 199.000/bln)</span>
+                <span className="text-purple-700">Bisnis (Rp 299.000/bln)</span>
                 <span className="text-slate-900">{enterpriseCount} Peternakan</span>
               </div>
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -560,7 +560,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
             {/* Pro Bar */}
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between font-bold">
-                <span className="text-amber-700">Pro (Rp 99.000/bln)</span>
+                <span className="text-amber-700">Pro (Rp 150.000/bln)</span>
                 <span className="text-slate-900">{proCount} Peternakan</span>
               </div>
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -985,7 +985,7 @@ export const SaaSOwnerDashboard: React.FC = () => {
                   >
                     <option value="basic">Basic (Rp 49rb/bln)</option>
                     <option value="pro">Pro (Rp 99rb/bln)</option>
-                    <option value="enterprise">Bisnis (Rp 199rb/bln)</option>
+                    <option value="enterprise">Bisnis (Rp 299rb/bln)</option>
                   </select>
                 </div>
               </div>

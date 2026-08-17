@@ -294,7 +294,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
             
             {/* Basic Plan */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5 flex flex-col justify-between shadow-2xs">
@@ -303,6 +303,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                 <h3 className="text-xl font-extrabold text-slate-900 mt-1">Paket Basic</h3>
                 <div className="text-2xl font-black text-slate-900 mt-2">
                   Rp 49.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
+                  <div className="text-sm font-bold text-emerald-700 mt-1">Rp 490.000 <span className="text-xs font-normal text-slate-400">/ tahun</span></div>
                 </div>
 
                 <ul className="mt-5 space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4">
@@ -339,7 +340,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                 <span className="text-xs font-bold text-emerald-700 uppercase">Peternakan Skala Menengah</span>
                 <h3 className="text-xl font-extrabold text-slate-900 mt-1">Paket Pro</h3>
                 <div className="text-2xl font-black text-slate-900 mt-2">
-                  Rp 99.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
+                  Rp 150.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
+                  <div className="text-sm font-bold text-emerald-700 mt-1">Rp 1.500.000 <span className="text-xs font-normal text-slate-400">/ tahun</span></div>
                 </div>
 
                 <ul className="mt-5 space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4">
@@ -375,12 +377,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
                 <span className="text-xs font-bold text-purple-700 uppercase">Peternakan Berkembang</span>
                 <h3 className="text-xl font-extrabold text-slate-900 mt-1">Paket Bisnis</h3>
                 <div className="text-2xl font-black text-slate-900 mt-2">
-                  Rp 199.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
+                  Rp 299.000 <span className="text-xs font-normal text-slate-400">/ bulan</span>
+                  <div className="text-sm font-bold text-emerald-700 mt-1">Rp 2.990.000 <span className="text-xs font-normal text-slate-400">/ tahun</span></div>
                 </div>
 
                 <ul className="mt-5 space-y-2.5 text-xs text-slate-600 border-t border-slate-100 pt-4">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Tanpa Batasan Jumlah Kandang
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Maksimal 30 Kandang Ayam
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Semua Fitur Pro
@@ -400,6 +403,40 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
               >
                 Pilih Paket Bisnis
               </button>
+            </div>
+
+            {/* Enterprise Custom Plan */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 flex flex-col justify-between shadow-lg text-white">
+              <div>
+                <span className="text-xs font-bold text-emerald-400 uppercase">Untuk Operasional Kompleks</span>
+                <h3 className="text-xl font-extrabold mt-1">Enterprise</h3>
+                <div className="text-2xl font-black mt-2">Hubungi Kami</div>
+                <ul className="mt-5 space-y-2.5 text-xs text-slate-200 border-t border-slate-700 pt-4">
+                  {[
+                    'Kandang unlimited',
+                    'User sesuai kebutuhan',
+                    'Multi-farm / multi-company',
+                    'Onboarding',
+                    'Migrasi data',
+                    'Training',
+                    'Custom report',
+                    'API / integrasi',
+                    'Dedicated support'
+                  ].map((feature) => (
+                    <li key={feature} className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <a
+                href="https://wa.me/6285707104107?text=Saya%20tertarik%20dengan%20paket%20Enterprise%20PetelurKu.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-4 h-4" /> Hubungi Kami
+              </a>
             </div>
 
           </div>

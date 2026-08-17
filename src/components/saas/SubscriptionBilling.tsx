@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, Zap, CheckCircle2, ShieldCheck, ArrowRight, Download } from 'lucide-react';
+import { CreditCard, Zap, CheckCircle2, ArrowRight, MessageCircle } from 'lucide-react';
 import { Organization, SubscriptionPlan } from '../../types';
 import { ApiService } from '../../services/api';
 
@@ -14,6 +14,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
 }) => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('pro');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState('');
@@ -43,12 +44,12 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
     checkStatus();
   }, []);
 
-  const plans: { id: SubscriptionPlan; name: string; price: string; rawPrice: number; features: string[]; isPopular?: boolean }[] = [
+  const plans: { id: SubscriptionPlan; name: string; monthlyPrice: string; annualPrice: string; features: string[]; isPopular?: boolean }[] = [
     {
       id: 'basic',
       name: 'Plan Basic',
-      price: 'Rp 49.000',
-      rawPrice: 49000,
+      monthlyPrice: 'Rp 49.000',
+      annualPrice: 'Rp 490.000',
       features: [
         'Maksimal 2 kandang',
         '2 pengguna termasuk owner',
@@ -62,8 +63,8 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
     {
       id: 'pro',
       name: 'Plan Pro Layer',
-      price: 'Rp 99.000',
-      rawPrice: 99000,
+      monthlyPrice: 'Rp 150.000',
+      annualPrice: 'Rp 1.500.000',
       isPopular: true,
       features: [
         'Semua fitur Basic',
@@ -77,11 +78,11 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
     {
       id: 'enterprise',
       name: 'Plan Bisnis',
-      price: 'Rp 199.000',
-      rawPrice: 199000,
+      monthlyPrice: 'Rp 299.000',
+      annualPrice: 'Rp 2.990.000',
       features: [
         'Semua fitur Pro',
-        'Jumlah kandang tanpa batas',
+        'Maksimal 30 kandang',
         'Maksimal 30 pengguna',
         'Laporan produksi dan keuangan PDF',
         'Kelola akses petugas per kandang',
@@ -94,7 +95,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
     setIsProcessing(true);
     setPaymentError('');
     try {
-      const checkout = await ApiService.createSubscriptionCheckout(selectedPlan);
+      const checkout = await ApiService.createSubscriptionCheckout(selectedPlan, billingCycle);
       window.location.assign(checkout.redirectUrl);
     } catch (error: any) {
       setIsProcessing(false);
@@ -125,7 +126,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
       </div>
 
       {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {plans.map((p) => {
           const isCurrent = org.plan === p.id && !isTrial;
 
@@ -147,7 +148,8 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
               <div>
                 <h3 className="text-base font-bold text-slate-900">{p.name}</h3>
                 <div className="text-2xl font-black text-slate-900 mt-2 mb-4">
-                  {p.price} <span className="text-xs font-normal text-slate-500">/ bulan</span>
+                  {p.monthlyPrice} <span className="text-xs font-normal text-slate-500">/ bulan</span>
+                  <div className="text-sm font-bold text-emerald-700 mt-1">{p.annualPrice} <span className="text-xs font-normal text-slate-500">/ tahun</span></div>
                 </div>
 
                 <div className="space-y-2.5 text-xs text-slate-700 pt-3 border-t border-slate-100">
@@ -185,6 +187,43 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
             </div>
           );
         })}
+
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between relative shadow-lg text-white">
+          <div>
+            <span className="text-xs font-bold text-emerald-400 uppercase">Untuk Operasional Kompleks</span>
+            <h3 className="text-base font-bold mt-1">Enterprise</h3>
+            <div className="text-2xl font-black mt-2 mb-4">Hubungi Kami</div>
+            <div className="space-y-2.5 text-xs text-slate-200 pt-3 border-t border-slate-700">
+              {[
+                'Jumlah kandang tanpa batas',
+                'Jumlah pengguna sesuai kebutuhan',
+                'Multi-farm / multi-company',
+                'Onboarding',
+                'Migrasi data',
+                'Training',
+                'Custom report',
+                'API / integrasi',
+                'Dedicated support'
+              ].map((feature) => (
+                <div key={feature} className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-6 pt-4 border-t border-slate-700">
+            <a
+              href="https://wa.me/6285707104107?text=Saya%20tertarik%20dengan%20paket%20Enterprise%20PetelurKu.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Hubungi Kami
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* Payment Gateway Simulator Modal */}
@@ -199,6 +238,10 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
                 </p>
 
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4 text-xs">
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <button onClick={() => setBillingCycle('monthly')} className={`rounded-lg px-3 py-2 font-bold ${billingCycle === 'monthly' ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>Bulanan</button>
+                    <button onClick={() => setBillingCycle('annual')} className={`rounded-lg px-3 py-2 font-bold ${billingCycle === 'annual' ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>Tahunan</button>
+                  </div>
                   <div className="flex justify-between mb-1">
                     <span className="text-slate-500">Paket Dipilih:</span>
                     <span className="font-bold text-amber-800 uppercase">{selectedPlan}</span>
@@ -206,7 +249,7 @@ export const SubscriptionBilling: React.FC<SubscriptionBillingProps> = ({
                   <div className="flex justify-between">
                     <span className="text-slate-500">Total Tagihan Bulanan:</span>
                     <span className="font-black text-slate-900 text-sm">
-                      {plans.find(p => p.id === selectedPlan)?.price}
+                      {billingCycle === 'annual' ? plans.find(p => p.id === selectedPlan)?.annualPrice : plans.find(p => p.id === selectedPlan)?.monthlyPrice}
                     </span>
                   </div>
                 </div>

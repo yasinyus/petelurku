@@ -96,6 +96,27 @@ export default function App() {
     loadMySQLData().catch((err) => showToast(`Gagal memuat MySQL: ${err.message}`));
   }, [dataMode, authenticatedUserId, currentUser.role]);
 
+  // Data may be entered from the mobile app while this web session remains
+  // open. Refresh from MySQL whenever Finance is opened or the browser regains
+  // focus so both clients show the same records without requiring a hard reload.
+  useEffect(() => {
+    if (dataMode !== 'real' || !authenticatedUserId || currentUser.role === 'saas_owner') return;
+    if (activeTab === 'finance') {
+      loadMySQLData().catch((err) => showToast(`Gagal menyinkronkan keuangan: ${err.message}`));
+    }
+    const refreshOnFocus = () => {
+      if (document.visibilityState === 'visible') {
+        loadMySQLData().catch((err) => showToast(`Gagal menyinkronkan data: ${err.message}`));
+      }
+    };
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnFocus);
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnFocus);
+    };
+  }, [activeTab, dataMode, authenticatedUserId, currentUser.role]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);

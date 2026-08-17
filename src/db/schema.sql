@@ -232,8 +232,8 @@ CREATE TABLE IF NOT EXISTS `saas_subscriptions` (
 -- Selaraskan harga paket lama dengan harga PetelurKu yang berlaku saat ini.
 UPDATE `farms` SET `mrr_amount` = CASE `subscription_plan`
   WHEN 'basic' THEN 49000
-  WHEN 'pro' THEN 99000
-  WHEN 'enterprise' THEN 199000
+  WHEN 'pro' THEN 150000
+  WHEN 'enterprise' THEN 299000
   ELSE `mrr_amount`
 END;
 
@@ -244,7 +244,7 @@ INSERT IGNORE INTO `users` (`id`, `email`, `password_hash`, `full_name`, `role`,
 ('usr-farm-1', 'yasin@barokahfarm.id', 'hash_secret_456', 'H. Yasin Yusuf', 'farm_owner', 'active');
 
 INSERT IGNORE INTO `farms` (`id`, `owner_user_id`, `name`, `owner_name`, `city`, `subscription_plan`, `subscription_status`, `mrr_amount`) VALUES
-('farm-barokah-01', 'usr-farm-1', 'Peternakan Barokah Layer Farm', 'H. Yasin Yusuf', 'Blitar', 'pro', 'active', 99000.00);
+('farm-barokah-01', 'usr-farm-1', 'Peternakan Barokah Layer Farm', 'H. Yasin Yusuf', 'Blitar', 'pro', 'active', 150000.00);
 
 INSERT IGNORE INTO `houses` (`id`, `farm_id`, `code`, `name`, `chicken_type`, `initial_chickens`, `current_chickens`, `housed_date`, `age_weeks`) VALUES
 ('house-A1', 'farm-barokah-01', 'KD-A1', 'Kandang A1 (Utama)', 'Isa Brown Layer', 5000, 4920, '2025-06-15', 34),
