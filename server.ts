@@ -1507,11 +1507,10 @@ async function startServer() {
       if (!farmId) return res.status(403).json({ error: 'Peternakan untuk akun ini tidak ditemukan.' });
       await ensureFarmFeedSetup(farmId);
       const date = String(req.query.date || getJakartaDate());
-      const [populationRows, consumptionRows, materialRows]: any[] = await Promise.all([
-        queryMySQL(`SELECT
-          COALESCE(SUM(CASE WHEN DATEDIFF(?, housed_date) >= 140 THEN current_chickens ELSE 0 END), 0) AS total_chickens,
-          COALESCE(SUM(CASE WHEN DATEDIFF(?, housed_date) < 140 THEN current_chickens ELSE 0 END), 0) AS excluded_pullet_chickens
-          FROM houses WHERE farm_id = ?`, [date, date, farmId]),
+      const [houseRows, consumptionRows, materialRows]: any[] = await Promise.all([
+        queryMySQL(`SELECT id, code, name, current_chickens,
+          CASE WHEN DATEDIFF(?, housed_date) >= 140 THEN 1 ELSE 0 END AS is_productive
+          FROM houses WHERE farm_id = ? ORDER BY code`, [date, farmId]),
         queryMySQL('SELECT grams_per_chicken FROM feed_consumption_settings WHERE farm_id = ?', [farmId]),
         queryMySQL(`SELECT fi.id, fi.feed_name, fi.feed_type, fi.price_per_kg, fcs.percentage
           FROM feed_composition_settings fcs
@@ -1522,8 +1521,8 @@ async function startServer() {
             ORDER BY (fi2.price_per_kg > 0) DESC, fi2.created_at DESC, fi2.id DESC LIMIT 1)
           ORDER BY fcs.percentage DESC`, [farmId])
       ]);
-      const totalChickens = Number(populationRows[0]?.total_chickens || 0);
-      const excludedPulletChickens = Number(populationRows[0]?.excluded_pullet_chickens || 0);
+      const totalChickens = houseRows.reduce((total: number, house: any) => total + (Number(house.is_productive) ? Number(house.current_chickens || 0) : 0), 0);
+      const excludedPulletChickens = houseRows.reduce((total: number, house: any) => total + (!Number(house.is_productive) ? Number(house.current_chickens || 0) : 0), 0);
       const gramsPerChicken = Number(consumptionRows[0]?.grams_per_chicken || 110);
       const totalConsumedKg = Number(((totalChickens * gramsPerChicken) / 1000).toFixed(2));
       const materials = materialRows.map((item: any) => {
@@ -1541,7 +1540,21 @@ async function startServer() {
         };
       });
       const totalCost = materials.reduce((total: number, item: any) => total + item.subtotal, 0);
-      return res.json({ source: 'mysql', data: { date, totalChickens, excludedPulletChickens, gramsPerChicken, materials, totalConsumedKg, totalCost } });
+      const houses = houseRows.map((house: any) => {
+        const chickenCount = Number(house.current_chickens || 0);
+        const isProductive = Boolean(Number(house.is_productive));
+        const allocationRatio = isProductive && totalChickens > 0 ? chickenCount / totalChickens : 0;
+        return {
+          houseId: house.id,
+          code: house.code,
+          name: house.name,
+          chickenCount,
+          isProductive,
+          consumedKg: totalConsumedKg * allocationRatio,
+          totalCost: totalCost * allocationRatio
+        };
+      });
+      return res.json({ source: 'mysql', data: { date, totalChickens, excludedPulletChickens, gramsPerChicken, materials, houses, totalConsumedKg, totalCost } });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }

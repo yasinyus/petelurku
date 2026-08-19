@@ -13,7 +13,8 @@ import {
   Crown,
   Egg,
   MapPin,
-  MessageCircle
+  MessageCircle,
+  Download
 } from 'lucide-react';
 import { AuthModal } from '../auth/AuthModal';
 
@@ -65,6 +66,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
 
           {/* CTA Buttons */}
           <div className="flex items-center gap-2.5">
+            <a
+              href="/download"
+              title="Download aplikasi Android"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[11px] font-bold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-100"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden lg:inline">Download Android</span>
+            </a>
             <button
               onClick={() => openAuth('login')}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
@@ -512,9 +521,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenApp }) => {
             ))}
           </div>
           <div className="mt-9 text-center">
-            <button onClick={() => openAuth('register')} className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition cursor-pointer">
-              Mulai Kelola Peternakan Gratis
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button onClick={() => openAuth('register')} className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition cursor-pointer">Mulai Kelola Peternakan Gratis</button>
+              <a href="/download" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-bold text-slate-700 transition hover:border-emerald-500 hover:text-emerald-700"><Download className="h-4 w-4" /> Download Aplikasi Android</a>
+            </div>
           </div>
         </div>
       </section>

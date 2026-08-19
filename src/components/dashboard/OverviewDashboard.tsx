@@ -28,7 +28,12 @@ interface OverviewDashboardProps {
   healthLogs: HealthLog[];
   transactions: FinancialTransaction[];
   eggEstimate: { totalWeightKg: number; pricePerKg: number; estimatedRevenue: number };
-  dailyFeedCost: { materials: Array<{ id: string; name: string; feedType: string; consumedKg: number; pricePerKg: number; subtotal: number }>; totalConsumedKg: number; totalCost: number };
+  dailyFeedCost: {
+    materials: Array<{ id: string; name: string; feedType: string; consumedKg: number; pricePerKg: number; subtotal: number }>;
+    houses?: Array<{ houseId: string; code: string; name: string; chickenCount: number; isProductive: boolean; consumedKg: number; totalCost: number }>;
+    totalConsumedKg: number;
+    totalCost: number;
+  };
   currentUser: User;
   onNavigate: (tab: TabType) => void;
   onQuickAddEgg: () => void;
@@ -74,9 +79,29 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
     }
     ApiService.getDailyFeedCost(selectedDate).then((result) => {
       if (result.data) setSelectedFeedCost(result.data);
-    }).catch(() => setSelectedFeedCost({ materials: [], totalConsumedKg: 0, totalCost: 0 }));
+    }).catch(() => setSelectedFeedCost({ materials: [], houses: [], totalConsumedKg: 0, totalCost: 0 }));
   }, [dashboardPeriod, selectedDate, dailyFeedCost]);
   const selectedProfitLoss = selectedEggRevenue - Number(selectedFeedCost.totalCost || 0);
+
+  const productivePopulation = coops
+    .filter(coop => coop.ageWeeks >= 20)
+    .reduce((sum, coop) => sum + coop.currentChickens, 0);
+  const coopDailyProfitRows = coops.map((coop) => {
+    const logs = selectedLogs.filter(log => log.coopId === coop.id);
+    const totalEggs = logs.reduce((sum, log) => sum + log.totalEggs, 0);
+    const weightKg = logs.reduce((sum, log) => sum + log.totalWeightKg, 0);
+    const revenue = weightKg * eggPricePerKg;
+    const feedHouse = selectedFeedCost.houses?.find(house => house.houseId === coop.id);
+    const fallbackRatio = coop.ageWeeks >= 20 && productivePopulation > 0
+      ? coop.currentChickens / productivePopulation
+      : 0;
+    const feedCost = feedHouse
+      ? Number(feedHouse.totalCost || 0)
+      : Number(selectedFeedCost.totalCost || 0) * fallbackRatio;
+    const profitLoss = revenue - feedCost;
+    const hdp = coop.currentChickens > 0 ? (totalEggs / coop.currentChickens) * 100 : 0;
+    return { coop, totalEggs, weightKg, revenue, feedCost, profitLoss, hdp };
+  });
 
   const avgHdp = selectedTotalEggs && totalChickens 
     ? Number(((selectedTotalEggs / totalChickens) * 100).toFixed(1)) 
@@ -353,6 +378,50 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
               <div className="mt-1 font-black text-amber-800">Rp {Number(material.subtotal).toLocaleString('id-ID')}</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+        <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-emerald-600" />
+              Estimasi Laba/Rugi Harian Per Kandang
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-1">Pendapatan telur dikurangi estimasi biaya pakan pada {selectedDateLabel}. Belum termasuk obat, listrik, gaji, dan biaya bersama lainnya.</p>
+          </div>
+          <span className={`self-start sm:self-auto rounded-lg px-3 py-1.5 text-xs font-black ${selectedProfitLoss >= 0 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+            Total: {selectedProfitLoss < 0 ? '- ' : ''}Rp {Math.abs(selectedProfitLoss).toLocaleString('id-ID')}
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[850px] text-xs text-left">
+            <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Kandang</th>
+                <th className="px-4 py-3 text-right">Produksi</th>
+                <th className="px-4 py-3 text-right">Berat</th>
+                <th className="px-4 py-3 text-right">HDP</th>
+                <th className="px-4 py-3 text-right">Pendapatan Telur</th>
+                <th className="px-4 py-3 text-right">Biaya Pakan</th>
+                <th className="px-4 py-3 text-right">Estimasi Laba/Rugi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {coopDailyProfitRows.map(({ coop, totalEggs, weightKg, revenue, feedCost, profitLoss, hdp }) => (
+                <tr key={coop.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3"><div className="font-bold text-slate-900">{coop.name}</div><div className="text-[10px] text-slate-500">{coop.code}</div></td>
+                  <td className="px-4 py-3 text-right font-semibold text-slate-800">{totalEggs.toLocaleString('id-ID')} btr</td>
+                  <td className="px-4 py-3 text-right text-slate-700">{weightKg.toLocaleString('id-ID')} kg</td>
+                  <td className="px-4 py-3 text-right"><span className={`font-bold ${hdp >= 85 ? 'text-emerald-700' : 'text-amber-700'}`}>{hdp.toFixed(1)}%</span></td>
+                  <td className="px-4 py-3 text-right font-semibold text-emerald-700">Rp {revenue.toLocaleString('id-ID')}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-rose-600">Rp {feedCost.toLocaleString('id-ID')}</td>
+                  <td className={`px-4 py-3 text-right font-black ${profitLoss >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{profitLoss < 0 ? '- ' : ''}Rp {Math.abs(profitLoss).toLocaleString('id-ID')}</td>
+                </tr>
+              ))}
+              {coopDailyProfitRows.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">Belum ada kandang untuk dihitung.</td></tr>}
+            </tbody>
+          </table>
         </div>
       </div>
 

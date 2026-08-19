@@ -30,6 +30,7 @@ import { FarmProfile } from './components/saas/FarmProfile';
 import { SubscriptionBilling } from './components/saas/SubscriptionBilling';
 import { SaaSOwnerDashboard } from './components/saas/SaaSOwnerDashboard';
 import { LandingPage } from './components/landing/LandingPage';
+import { ApkDownloadPage } from './components/download/ApkDownloadPage';
 import { E2EEAndSyncModal } from './components/security/E2EEAndSyncModal';
 import { MySQLInspectorModal } from './components/database/MySQLInspectorModal';
 import { FlutterMobileStudio } from './components/mobile/FlutterMobileStudio';
@@ -39,11 +40,12 @@ import { CheckCircle2, RefreshCw } from 'lucide-react';
 type DailyFeedCost = {
   date: string;
   materials: Array<{ id: string; name: string; feedType: string; consumedKg: number; pricePerKg: number; subtotal: number }>;
+  houses?: Array<{ houseId: string; code: string; name: string; chickenCount: number; isProductive: boolean; consumedKg: number; totalCost: number }>;
   totalConsumedKg: number;
   totalCost: number;
 };
 
-export default function App() {
+function MainApp() {
   const [viewMode, setViewMode] = useState<'app' | 'landing'>('landing');
   const [isSessionChecking, setIsSessionChecking] = useState(true);
   const [isGuestDemo, setIsGuestDemo] = useState(false);
@@ -777,4 +779,9 @@ export default function App() {
 
     </div>
   );
+}
+
+export default function App() {
+  if (window.location.pathname.replace(/\/$/, '') === '/download') return <ApkDownloadPage />;
+  return <MainApp />;
 }
