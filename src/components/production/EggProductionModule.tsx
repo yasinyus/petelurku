@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Egg, Plus, Filter, CheckCircle2, Pencil, Trash2, CalendarDays, Warehouse, X } from 'lucide-react';
+import { Egg, Plus, Filter, CheckCircle2, Pencil, Trash2, CalendarDays, Warehouse, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Coop, EggProductionLog, User } from '../../types';
 import { ApiService } from '../../services/api';
 import { getLocalDateInputValue } from '../../utils/date';
@@ -27,6 +27,8 @@ export const EggProductionModule: React.FC<EggProductionModuleProps> = ({
   const [editingLog, setEditingLog] = useState<EggProductionLog | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedCoopFilter, setSelectedCoopFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Form states
   const [coopId, setCoopId] = useState(coops[0]?.id || '');
@@ -140,6 +142,14 @@ export const EggProductionModule: React.FC<EggProductionModuleProps> = ({
   const filteredLogs = selectedCoopFilter === 'all'
     ? productionLogs
     : productionLogs.filter(l => l.coopId === selectedCoopFilter);
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize));
+  const activePage = Math.min(currentPage, totalPages);
+  const firstItemIndex = (activePage - 1) * pageSize;
+  const paginatedLogs = filteredLogs.slice(firstItemIndex, firstItemIndex + pageSize);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   return (
     <div className="space-y-6">
@@ -172,7 +182,10 @@ export const EggProductionModule: React.FC<EggProductionModuleProps> = ({
           <span className="hidden sm:inline text-slate-700 font-medium">Filter Kandang:</span>
           <select
             value={selectedCoopFilter}
-            onChange={(e) => setSelectedCoopFilter(e.target.value)}
+            onChange={(e) => {
+              setSelectedCoopFilter(e.target.value);
+              setCurrentPage(1);
+            }}
             className="min-w-0 flex-1 sm:flex-none bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-600 font-medium"
           >
             <option value="all">Semua Kandang ({productionLogs.length} Entri)</option>
@@ -208,7 +221,7 @@ export const EggProductionModule: React.FC<EggProductionModuleProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-800 font-medium">
-              {filteredLogs.map((log) => {
+              {paginatedLogs.map((log) => {
                 const coop = coops.find(c => c.id === log.coopId);
                 const isGoodHdp = log.henDayRate >= 85;
 
@@ -261,6 +274,9 @@ export const EggProductionModule: React.FC<EggProductionModuleProps> = ({
                   </tr>
                 );
               })}
+              {paginatedLogs.length === 0 && (
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-slate-500">Belum ada catatan produksi.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -275,7 +291,7 @@ export const EggProductionModule: React.FC<EggProductionModuleProps> = ({
             <p className="mt-1 text-xs text-slate-500">Tekan tombol input untuk mencatat panen hari ini.</p>
           </div>
         )}
-        {filteredLogs.map((log) => {
+        {paginatedLogs.map((log) => {
           const coop = coops.find(c => c.id === log.coopId);
           const fcr = log.totalWeightKg > 0 && (log.feedUsageKg || 0) > 0
             ? ((log.feedUsageKg || 0) / log.totalWeightKg).toFixed(2)
@@ -310,6 +326,52 @@ export const EggProductionModule: React.FC<EggProductionModuleProps> = ({
           );
         })}
       </div>
+
+      {filteredLogs.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs shadow-xs sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-slate-600">
+            <span>Baris per halaman:</span>
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setCurrentPage(1);
+              }}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 font-bold text-slate-800 focus:border-emerald-600 focus:outline-none"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+            <span className="hidden sm:inline">
+              Menampilkan {firstItemIndex + 1}–{Math.min(firstItemIndex + pageSize, filteredLogs.length)} dari {filteredLogs.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <span className="font-semibold text-slate-700">Halaman {activePage} dari {totalPages}</span>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                disabled={activePage === 1}
+                aria-label="Halaman sebelumnya"
+                className="rounded-lg border border-slate-200 p-2 text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+                disabled={activePage === totalPages}
+                aria-label="Halaman berikutnya"
+                className="rounded-lg border border-slate-200 p-2 text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Log Modal */}
       {showAddModal && (
