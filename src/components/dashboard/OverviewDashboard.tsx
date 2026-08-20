@@ -20,6 +20,40 @@ import { TabType } from '../Sidebar';
 import { getLocalDateInputValue, shiftCalendarDate } from '../../utils/date';
 import { ApiService } from '../../services/api';
 
+type DashboardFeedCost = {
+  materials: Array<{ id: string; name: string; feedType: string; consumedKg: number; pricePerKg: number; subtotal: number }>;
+  houses?: Array<{ houseId: string; code: string; name: string; chickenCount: number; isProductive: boolean; consumedKg: number; totalCost: number }>;
+  totalConsumedKg: number;
+  totalCost: number;
+};
+
+const emptyFeedCost = (): DashboardFeedCost => ({ materials: [], houses: [], totalConsumedKg: 0, totalCost: 0 });
+
+const aggregateFeedCosts = (costs: DashboardFeedCost[]): DashboardFeedCost => {
+  const materials = new Map<string, DashboardFeedCost['materials'][number]>();
+  const houses = new Map<string, NonNullable<DashboardFeedCost['houses']>[number]>();
+  costs.forEach((cost) => {
+    cost.materials.forEach((material) => {
+      const current = materials.get(material.id);
+      materials.set(material.id, current
+        ? { ...current, consumedKg: current.consumedKg + Number(material.consumedKg || 0), subtotal: current.subtotal + Number(material.subtotal || 0) }
+        : { ...material, consumedKg: Number(material.consumedKg || 0), subtotal: Number(material.subtotal || 0) });
+    });
+    cost.houses?.forEach((house) => {
+      const current = houses.get(house.houseId);
+      houses.set(house.houseId, current
+        ? { ...current, consumedKg: current.consumedKg + Number(house.consumedKg || 0), totalCost: current.totalCost + Number(house.totalCost || 0) }
+        : { ...house, consumedKg: Number(house.consumedKg || 0), totalCost: Number(house.totalCost || 0) });
+    });
+  });
+  return {
+    materials: Array.from(materials.values()),
+    houses: Array.from(houses.values()),
+    totalConsumedKg: costs.reduce((sum, cost) => sum + Number(cost.totalConsumedKg || 0), 0),
+    totalCost: costs.reduce((sum, cost) => sum + Number(cost.totalCost || 0), 0),
+  };
+};
+
 interface OverviewDashboardProps {
   coops: Coop[];
   productionLogs: EggProductionLog[];
@@ -28,12 +62,7 @@ interface OverviewDashboardProps {
   healthLogs: HealthLog[];
   transactions: FinancialTransaction[];
   eggEstimate: { totalWeightKg: number; pricePerKg: number; estimatedRevenue: number };
-  dailyFeedCost: {
-    materials: Array<{ id: string; name: string; feedType: string; consumedKg: number; pricePerKg: number; subtotal: number }>;
-    houses?: Array<{ houseId: string; code: string; name: string; chickenCount: number; isProductive: boolean; consumedKg: number; totalCost: number }>;
-    totalConsumedKg: number;
-    totalCost: number;
-  };
+  dailyFeedCost: DashboardFeedCost;
   currentUser: User;
   onNavigate: (tab: TabType) => void;
   onQuickAddEgg: () => void;
@@ -52,7 +81,8 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   onQuickAddEgg,
   onQuickAddExpense
 }) => {
-  const [dashboardPeriod, setDashboardPeriod] = useState<'today' | 'yesterday'>('today');
+  const [dashboardPeriod, setDashboardPeriod] = useState<'today' | 'yesterday' | 'last7' | 'custom'>('today');
+  const [customDate, setCustomDate] = useState(getLocalDateInputValue());
   const eggPricePerKg = Number(eggEstimate?.pricePerKg) || 26000;
   // Calculated stats
   const totalChickens = coops.reduce((sum, c) => sum + c.currentChickens, 0);
@@ -60,12 +90,23 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   // Real production for the current local calendar date. Multiple harvest
   // sessions and houses are all included in today's totals.
   const today = getLocalDateInputValue();
-  const selectedDate = dashboardPeriod === 'today' ? today : shiftCalendarDate(today, -1);
-  const selectedPeriodLabel = dashboardPeriod === 'today' ? 'Hari Ini' : 'Kemarin';
-  const selectedDateLabel = new Intl.DateTimeFormat('id-ID', {
+  const selectedDates = dashboardPeriod === 'last7'
+    ? Array.from({ length: 7 }, (_, index) => shiftCalendarDate(today, index - 6))
+    : [dashboardPeriod === 'today' ? today : dashboardPeriod === 'yesterday' ? shiftCalendarDate(today, -1) : customDate];
+  const selectedDateKey = selectedDates.join(',');
+  const selectedPeriodLabel = dashboardPeriod === 'today'
+    ? 'Hari Ini'
+    : dashboardPeriod === 'yesterday'
+      ? 'Kemarin'
+      : dashboardPeriod === 'last7' ? '7 Hari Terakhir' : 'Tanggal Dipilih';
+  const formatDashboardDate = (value: string) => new Intl.DateTimeFormat('id-ID', {
     day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC'
-  }).format(new Date(`${selectedDate}T00:00:00Z`));
-  const selectedLogs = productionLogs.filter(log => log.date === selectedDate);
+  }).format(new Date(`${value}T00:00:00Z`));
+  const selectedDateLabel = dashboardPeriod === 'last7'
+    ? `${formatDashboardDate(selectedDates[0])} – ${formatDashboardDate(selectedDates[selectedDates.length - 1])}`
+    : formatDashboardDate(selectedDates[0]);
+  const selectedDateSet = new Set(selectedDates);
+  const selectedLogs = productionLogs.filter(log => selectedDateSet.has(log.date));
   const selectedTotalEggs = selectedLogs.reduce((sum, p) => sum + p.totalEggs, 0);
   const selectedGoodEggs = selectedLogs.reduce((sum, p) => sum + p.goodEggs, 0);
   const selectedBrokenEggs = selectedLogs.reduce((sum, p) => sum + p.brokenEggs, 0);
@@ -73,14 +114,22 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   const selectedEggRevenue = selectedWeightKg * eggPricePerKg;
   const [selectedFeedCost, setSelectedFeedCost] = useState(dailyFeedCost);
   useEffect(() => {
+    let isCancelled = false;
     if (dashboardPeriod === 'today') {
       setSelectedFeedCost(dailyFeedCost);
-      return;
+      return () => { isCancelled = true; };
     }
-    ApiService.getDailyFeedCost(selectedDate).then((result) => {
-      if (result.data) setSelectedFeedCost(result.data);
-    }).catch(() => setSelectedFeedCost({ materials: [], houses: [], totalConsumedKg: 0, totalCost: 0 }));
-  }, [dashboardPeriod, selectedDate, dailyFeedCost]);
+    setSelectedFeedCost(emptyFeedCost());
+    const dates = selectedDateKey.split(',');
+    Promise.all(dates.map(date => ApiService.getDailyFeedCost(date))).then((results) => {
+      if (isCancelled) return;
+      const costs = results.map(result => result.data).filter(Boolean) as DashboardFeedCost[];
+      setSelectedFeedCost(costs.length ? aggregateFeedCosts(costs) : emptyFeedCost());
+    }).catch(() => {
+      if (!isCancelled) setSelectedFeedCost(emptyFeedCost());
+    });
+    return () => { isCancelled = true; };
+  }, [dashboardPeriod, selectedDateKey, dailyFeedCost]);
   const selectedProfitLoss = selectedEggRevenue - Number(selectedFeedCost.totalCost || 0);
 
   const productivePopulation = coops
@@ -99,12 +148,12 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
       ? Number(feedHouse.totalCost || 0)
       : Number(selectedFeedCost.totalCost || 0) * fallbackRatio;
     const profitLoss = revenue - feedCost;
-    const hdp = coop.currentChickens > 0 ? (totalEggs / coop.currentChickens) * 100 : 0;
+    const hdp = coop.currentChickens > 0 ? (totalEggs / (coop.currentChickens * selectedDates.length)) * 100 : 0;
     return { coop, totalEggs, weightKg, revenue, feedCost, profitLoss, hdp };
   });
 
   const avgHdp = selectedTotalEggs && totalChickens 
-    ? Number(((selectedTotalEggs / totalChickens) * 100).toFixed(1)) 
+    ? Number(((selectedTotalEggs / (totalChickens * selectedDates.length)) * 100).toFixed(1)) 
     : 0;
 
   // Financial totals
@@ -191,9 +240,27 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
           <p className="text-xs font-bold text-slate-900">Periode Data Dashboard</p>
           <p className="text-[11px] text-slate-500">Menampilkan data {selectedPeriodLabel.toLowerCase()}, {selectedDateLabel}</p>
         </div>
-        <div className="inline-flex rounded-xl bg-slate-100 p-1 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <div className="inline-flex rounded-xl bg-slate-100 p-1">
           <button type="button" onClick={() => setDashboardPeriod('today')} className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${dashboardPeriod === 'today' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Hari Ini</button>
           <button type="button" onClick={() => setDashboardPeriod('yesterday')} className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${dashboardPeriod === 'yesterday' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Kemarin</button>
+          <button type="button" onClick={() => setDashboardPeriod('last7')} className={`px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${dashboardPeriod === 'last7' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>7 Hari Terakhir</button>
+          </div>
+          <label className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${dashboardPeriod === 'custom' ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-600'}`}>
+            Cari tanggal
+            <input
+              type="date"
+              value={customDate}
+              max={today}
+              onChange={(event) => {
+                if (event.target.value) {
+                  setCustomDate(event.target.value);
+                  setDashboardPeriod('custom');
+                }
+              }}
+              className="bg-transparent text-slate-800 focus:outline-none"
+            />
+          </label>
         </div>
       </div>
 
@@ -334,7 +401,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
         {/* KPI 4: Calculated daily feed cost */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-slate-300 transition">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Biaya Pakan Harian</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Biaya Pakan {selectedPeriodLabel}</span>
             <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
               <Wheat className="w-4 h-4" />
             </div>
@@ -344,7 +411,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
           </div>
           <div className="text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100 flex justify-between">
             <span>Konsumsi:</span>
-            <span className="font-bold text-amber-700">{Number(selectedFeedCost.totalConsumedKg || 0).toLocaleString('id-ID')} kg/hari</span>
+            <span className="font-bold text-amber-700">{Number(selectedFeedCost.totalConsumedKg || 0).toLocaleString('id-ID')} kg</span>
           </div>
         </div>
 
@@ -367,7 +434,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
 
       <div className="bg-white border border-amber-200 rounded-2xl p-5 shadow-xs">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <div><h3 className="text-sm font-bold text-slate-900">Rincian Biaya Pakan Harian</h3><p className="text-[11px] text-slate-500">Konsumsi populasi layer umur ≥20 minggu dibagi berdasarkan komposisi, lalu dikalikan harga/kg. Kandang berstatus Pullet tidak dihitung.</p></div>
+          <div><h3 className="text-sm font-bold text-slate-900">Rincian Biaya Pakan {selectedPeriodLabel}</h3><p className="text-[11px] text-slate-500">Konsumsi populasi layer umur ≥20 minggu selama periode dipilih dibagi berdasarkan komposisi, lalu dikalikan harga/kg. Kandang berstatus Pullet tidak dihitung.</p></div>
           <span className="text-sm font-black text-amber-800">Rp {Number(selectedFeedCost.totalCost || 0).toLocaleString('id-ID')}</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
